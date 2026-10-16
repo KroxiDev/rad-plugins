@@ -1,0 +1,88 @@
+{
+  "contract": 1,
+  "id": "org.rad.audio",
+  "version": { "major": 0, "minor": 1, "patch": 0 },
+  "host_min": 2,
+  "host_max": 2,
+  "targets": ["x86_64-unknown-linux-gnu"],
+  "actions": [
+    {
+      "id": "output",
+      "label": "Audio output",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": { "type": "choice", "options": ["toggle", "mute", "unmute"] }
+          },
+          {
+            "id": "device",
+            "label": "Device",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    },
+    {
+      "id": "microphone",
+      "label": "Microphone",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": { "type": "choice", "options": ["toggle", "mute", "unmute"] }
+          },
+          {
+            "id": "device",
+            "label": "Device",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ],
+  "visuals": [
+    {
+      "id": "output",
+      "label": "Audio output state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "device",
+            "label": "Device",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    },
+    {
+      "id": "microphone",
+      "label": "Microphone state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "device",
+            "label": "Device",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ]
+}

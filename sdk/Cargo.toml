@@ -1,0 +1,15 @@
+[package]
+name = "rad-plugin-sdk"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = { workspace = true }
+description = "Minimal SDK for writing RAD Action Deck plugins: framing, protocol types, a dispatch loop and a RADP packer."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[[bin]]
+name = "radp-pack"
+path = "src/bin/radp-pack.rs"

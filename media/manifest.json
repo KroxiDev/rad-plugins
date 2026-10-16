@@ -1,0 +1,53 @@
+{
+  "contract": 1,
+  "id": "org.rad.media",
+  "version": { "major": 0, "minor": 1, "patch": 0 },
+  "host_min": 2,
+  "host_max": 2,
+  "targets": ["x86_64-unknown-linux-gnu"],
+  "actions": [
+    {
+      "id": "control",
+      "label": "Media control",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": ["play_pause", "play", "pause", "stop", "previous", "next"]
+            }
+          },
+          {
+            "id": "player",
+            "label": "Player",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ],
+  "visuals": [
+    {
+      "id": "now_playing",
+      "label": "Now playing",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "player",
+            "label": "Player",
+            "required": true,
+            "kind": { "type": "dynamic_choice", "depends_on": [] }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ]
+}

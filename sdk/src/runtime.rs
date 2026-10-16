@@ -1,0 +1,249 @@
+//! Handshake and the dispatch loop.
+use crate::{
+    ChoiceList, Envelope, Error, FailureCode, Message, OptionsScope, Outcome, PROTOCOL, Parameters,
+    Reply, Subscription, SubscriptionId, Version, frame,
+    reply::Slots,
+    subscription::{Heartbeat, Refused, Registry},
+    writer::Writer,
+};
+use std::{
+    io::{BufReader, Read, Write},
+    ops::RangeInclusive,
+    panic::{AssertUnwindSafe, catch_unwind},
+    sync::Arc,
+    time::Duration,
+};
+
+/// Default period of the visual heartbeat. The host expires a visual 1000 ms after its last
+/// message, so the period must stay well below that.
+pub const DEFAULT_HEARTBEAT: Duration = Duration::from_millis(400);
+/// Longest heartbeat period the SDK will use, whatever [`Config::heartbeat`] asks for.
+pub const MAX_HEARTBEAT: Duration = Duration::from_millis(500);
+/// Actions a plugin may run at once; the next one is answered `busy` without being queued.
+pub const MAX_INVOCATIONS: usize = 16;
+/// Option queries a plugin may answer at once; extra ones are answered `unavailable`.
+pub const MAX_OPTION_QUERIES: usize = 4;
+/// Visual subscriptions kept at once; extra ones are answered `unavailable` and not tracked.
+pub const MAX_SUBSCRIPTIONS: usize = 64;
+
+/// Identity and runtime settings of a plugin.
+#[derive(Debug, Clone)]
+pub struct Config {
+    /// Plugin id, as in the manifest.
+    pub id: String,
+    pub version: Version,
+    /// Inclusive range of host APIs the plugin supports (`host_min..=host_max` of the manifest).
+    pub host_api: RangeInclusive<u32>,
+    heartbeat: Duration,
+}
+impl Config {
+    pub fn new(id: impl Into<String>, version: Version, host_api: RangeInclusive<u32>) -> Self {
+        Self {
+            id: id.into(),
+            version,
+            host_api,
+            heartbeat: DEFAULT_HEARTBEAT,
+        }
+    }
+
+    /// Period at which the last state of every subscription is repeated. Clamped to
+    /// [`MAX_HEARTBEAT`].
+    pub fn heartbeat(mut self, interval: Duration) -> Self {
+        self.heartbeat = interval.min(MAX_HEARTBEAT);
+        self
+    }
+}
+
+/// An action the host asks the plugin to run.
+#[derive(Debug, Clone)]
+pub struct Invoke {
+    pub action: String,
+    pub parameters: Parameters,
+}
+
+/// A request for the current options of a dynamic choice field.
+#[derive(Debug, Clone)]
+pub struct OptionsQuery {
+    pub scope: OptionsScope,
+    pub definition: String,
+    pub field: String,
+    pub context: Parameters,
+}
+
+/// The behaviour of a plugin. Methods run on the loop's thread and must return quickly: do slow
+/// work on another thread and complete the [`Reply`] or [`Subscription`] from there.
+pub trait Plugin: Send + Sync + 'static {
+    /// Run an action. Dropping `reply` unanswered answers `failed`.
+    fn invoke(&self, call: Invoke, reply: Reply<Outcome>);
+    /// List the options of a dynamic choice field. Dropping `reply` unanswered answers
+    /// `unavailable`.
+    fn options(&self, query: OptionsQuery, reply: Reply<ChoiceList>);
+    /// The host subscribed to a visual source. Publish its state with [`Subscription::update`].
+    fn subscribe(&self, subscription: Subscription);
+    /// The subscription ended, because the host asked or because the session closed.
+    fn unsubscribe(&self, subscription: SubscriptionId);
+}
+
+/// Serves the host on `input`/`output` until the host closes the stream (`Ok`), breaks the
+/// protocol or declares an incompatible API (`Err`).
+pub fn run<P, R, W>(config: Config, plugin: P, input: R, output: W) -> Result<(), Error>
+where
+    P: Plugin,
+    R: Read,
+    W: Write + Send + 'static,
+{
+    let writer = Writer::new(output);
+    let mut input = BufReader::new(input);
+    let Some(generation) = handshake(&config, &mut input, &writer)? else {
+        return Ok(());
+    };
+    let session = Session {
+        plugin,
+        writer,
+        generation,
+        invocations: Slots::new(MAX_INVOCATIONS),
+        queries: Slots::new(MAX_OPTION_QUERIES),
+        subscriptions: Registry::new(MAX_SUBSCRIPTIONS),
+    };
+    let heartbeat = Heartbeat::start(Arc::clone(&session.subscriptions), config.heartbeat);
+    let result = session.serve(&mut input);
+    drop(heartbeat);
+    // The host is gone, so every subscription is over.
+    for subscription in session.subscriptions.drain() {
+        guarded(|| session.plugin.unsubscribe(subscription.id()));
+    }
+    result
+}
+
+/// Serves the host over stdin and stdout.
+pub fn run_stdio<P: Plugin>(config: Config, plugin: P) -> Result<(), Error> {
+    run(config, plugin, std::io::stdin(), std::io::stdout())
+}
+
+struct Session<P> {
+    plugin: P,
+    writer: Writer,
+    generation: u64,
+    invocations: Arc<Slots>,
+    queries: Arc<Slots>,
+    subscriptions: Arc<Registry>,
+}
+
+impl<P: Plugin> Session<P> {
+    fn serve(&self, input: &mut impl Read) -> Result<(), Error> {
+        while let Some(envelope) = next_envelope(input)? {
+            let correlation = envelope.correlation;
+            if correlation.generation != self.generation {
+                return Err(Error::Protocol("generation changed"));
+            }
+            match envelope.message {
+                Message::Invoke { action, parameters } => match self.invocations.acquire() {
+                    Some(permit) => {
+                        let reply = Reply::new(self.writer.clone(), correlation, permit);
+                        guarded(|| self.plugin.invoke(Invoke { action, parameters }, reply));
+                    }
+                    None => self.writer.send(
+                        correlation,
+                        Message::Result {
+                            outcome: Outcome::Failure {
+                                code: FailureCode::Busy,
+                            },
+                        },
+                    )?,
+                },
+                Message::Options {
+                    scope,
+                    definition,
+                    field,
+                    context,
+                } => match self.queries.acquire() {
+                    Some(permit) => {
+                        let reply = Reply::new(self.writer.clone(), correlation, permit);
+                        let query = OptionsQuery {
+                            scope,
+                            definition,
+                            field,
+                            context,
+                        };
+                        guarded(|| self.plugin.options(query, reply));
+                    }
+                    None => self.writer.send(
+                        correlation,
+                        Message::Choices {
+                            list: ChoiceList::Unavailable,
+                        },
+                    )?,
+                },
+                Message::Subscribe { source, parameters } => {
+                    let subscription =
+                        Subscription::new(self.writer.clone(), correlation, source, parameters);
+                    match self.subscriptions.insert(&subscription) {
+                        Ok(()) => guarded(|| self.plugin.subscribe(subscription)),
+                        Err(Refused::Full) => subscription.update(crate::VisualState::Unavailable),
+                        Err(Refused::Duplicate) => {
+                            return Err(Error::Protocol("subscription correlation reused"));
+                        }
+                    }
+                }
+                Message::Unsubscribe { subscription } => {
+                    if self.subscriptions.remove(subscription).is_some() {
+                        guarded(|| self.plugin.unsubscribe(subscription));
+                    }
+                }
+                _ => return Err(Error::Protocol("message not allowed from a host")),
+            }
+        }
+        Ok(())
+    }
+}
+
+/// A panic in a handler fails that request (its `Reply` answers while unwinding) and nothing else.
+fn guarded(handler: impl FnOnce()) {
+    let _ = catch_unwind(AssertUnwindSafe(handler));
+}
+
+fn next_envelope(input: &mut impl Read) -> Result<Option<Envelope>, Error> {
+    let Some(payload) = frame::read(input)? else {
+        return Ok(None);
+    };
+    let envelope: Envelope = serde_json::from_slice(&payload)?;
+    if envelope.protocol != PROTOCOL {
+        return Err(Error::Protocol("unsupported protocol version"));
+    }
+    if envelope.correlation.generation == 0 || envelope.correlation.request == 0 {
+        return Err(Error::Protocol("correlation ids must be positive"));
+    }
+    Ok(Some(envelope))
+}
+
+/// Answers the host's hello. `Ok(None)` if the host left before saying hello.
+fn handshake(
+    config: &Config,
+    input: &mut impl Read,
+    writer: &Writer,
+) -> Result<Option<u64>, Error> {
+    let Some(envelope) = next_envelope(input)? else {
+        return Ok(None);
+    };
+    let Message::Hello { host_api, .. } = envelope.message else {
+        return Err(Error::Protocol("expected hello"));
+    };
+    if envelope.correlation.request != 1 {
+        return Err(Error::Protocol("hello must use request 1"));
+    }
+    if !config.host_api.contains(&host_api) {
+        return Err(Error::IncompatibleHost {
+            requested: host_api,
+            min: *config.host_api.start(),
+            max: *config.host_api.end(),
+        });
+    }
+    writer.send(
+        envelope.correlation,
+        Message::Ready {
+            plugin_id: config.id.clone(),
+            plugin_version: config.version,
+        },
+    )?;
+    Ok(Some(envelope.correlation.generation))
+}

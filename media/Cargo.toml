@@ -1,0 +1,28 @@
+[package]
+name = "rad-plugin-media"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = { workspace = true }
+description = "RAD Action Deck plugin: control a media player (play, pause, stop, previous, next) and show its cover through MPRIS."
+
+[dependencies]
+rad-plugin-sdk = { path = "../sdk" }
+libc = { workspace = true }
+# D-Bus through GIO, pinned to the versions the host application already uses. No cargo
+# features are needed: only the synchronous and asynchronous D-Bus connection API is used.
+glib = { version = "=0.22.10", default-features = false }
+gio = { version = "=0.22.10", default-features = false }
+# Covers are decoded (PNG, JPEG) and re-encoded as a small JPEG.
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lib]
+name = "rad_plugin_media"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rad-plugin-media"
+path = "src/main.rs"

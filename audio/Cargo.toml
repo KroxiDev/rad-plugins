@@ -1,0 +1,21 @@
+[package]
+name = "rad-plugin-audio"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = { workspace = true }
+description = "RAD Action Deck plugin: mute, unmute and toggle the microphone and the audio output through pactl."
+
+[dependencies]
+rad-plugin-sdk = { path = "../sdk" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+libc = { workspace = true }
+
+[lib]
+name = "rad_plugin_audio"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rad-plugin-audio"
+path = "src/main.rs"
