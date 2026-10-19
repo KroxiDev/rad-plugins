@@ -9,15 +9,17 @@ workspace: it does not depend on any RAD crate, it implements the documented plu
 | [`sdk`](sdk) | `rad-plugin-sdk` | Framing, protocol types, the handshake and dispatch loop with deferred replies and visual heartbeats, and the `radp-pack` packer. |
 | [`audio`](audio) | `rad-plugin-audio` | Mute, unmute and toggle the microphone and the audio output through `pactl`. |
 | [`media`](media) | `rad-plugin-media` | Control a media player (play, pause, stop, previous, next) and show its cover through MPRIS on the session D-Bus. |
-| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; local validation in progress. |
+| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; metrics-v0.1.0 published. |
 | [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
 
-The metrics plugin release is prepared for
-[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0).
-Integrated review and exact-artifact real tests have satisfied the technical
-publication condition; release creation remains the coordinator's next action.
-Until that action is verified, this is not a claim of publication. Fixtures are
-not release artifacts. This does not license/publish RAD or close F5.
+The metrics plugin is published as
+[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0)
+after integrated review and exact-artifact real tests. RADP SHA256:
+`20f8ba214c18b3bd29d62c53c968536e9803234286c593b7f4108b2355cfc5b1`.
+A separate private installation check passed HTTPS curl download and offline
+Manager/runtime/IPC uninstall/reinstall; it did not test the integrated Downloader
+or GUI installation. Fixtures are not release artifacts. This does not
+license/publish RAD or close F5; human validation remains pending.
 
 ## Build, test, package
 
