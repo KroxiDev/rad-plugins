@@ -564,6 +564,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-plugin-metrics"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "rad-plugin-sdk",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-plugin-obs"
 version = "0.1.0"
 dependencies = [

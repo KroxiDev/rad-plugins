@@ -1,0 +1,21 @@
+[package]
+name = "rad-plugin-metrics"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = { workspace = true }
+description = "Shared bounded CPU/RAM and NVIDIA metrics for RAD"
+
+[dependencies]
+rad-plugin-sdk = { path = "../sdk" }
+libc = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[features]
+test-support = []
+
+[[example]]
+name = "metrics-fixture"
+required-features = ["test-support"]

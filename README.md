@@ -9,7 +9,15 @@ workspace: it does not depend on any RAD crate, it implements the documented plu
 | [`sdk`](sdk) | `rad-plugin-sdk` | Framing, protocol types, the handshake and dispatch loop with deferred replies and visual heartbeats, and the `radp-pack` packer. |
 | [`audio`](audio) | `rad-plugin-audio` | Mute, unmute and toggle the microphone and the audio output through `pactl`. |
 | [`media`](media) | `rad-plugin-media` | Control a media player (play, pause, stop, previous, next) and show its cover through MPRIS on the session D-Bus. |
+| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; local validation in progress. |
 | [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
+
+The metrics plugin release is prepared for
+[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0).
+Integrated review and exact-artifact real tests have satisfied the technical
+publication condition; release creation remains the coordinator's next action.
+Until that action is verified, this is not a claim of publication. Fixtures are
+not release artifacts. This does not license/publish RAD or close F5.
 
 ## Build, test, package
 
@@ -22,7 +30,10 @@ cargo clippy --locked --release --workspace --all-features --all-targets -- -D w
 `cargo test` runs without touching real audio: the tests drive a fake `pactl`. The media plugin's
 tests run against a private `dbus-daemon` (it must be installed) with fake MPRIS players, never the
 session bus. OBS tests use synthetic credentials and fake loopback servers on ephemeral ports,
-never an installed OBS instance or its default port. `test-support` enables fixture constructors and examples;
+never an installed OBS instance or its default port. Metrics tests use controlled proc
+files and a fake NVML library, never system sensors or the real driver. Its
+`metrics-fixture` example (feature `test-support`) runs the same plugin/SDK with fixed
+readings and the official manifest; it supports `--licenses`. `test-support` enables fixture constructors and examples;
 it does not change the production OBS endpoint. If you run a single test target (`cargo test --test process`),
 build the helper examples first. With an already populated cache, add `--offline` to these commands.
 
@@ -178,7 +189,7 @@ Project code is [MIT licensed](LICENSE). This does **not** relicense dependencie
 including conservatively retained build/target-specific and Rust library notices.
 The source tree includes those copies. All plugin executables embed all retained
 texts and print them with `--licenses` as their first argument, then exit without
-reading host input or connecting to audio/D-Bus/OBS. The notices therefore travel inside
+reading host input or connecting to audio/D-Bus/OBS or loading NVML. The notices therefore travel inside
 the executable even in the two-blob RADP container. Output failure returns a nonzero
 exit code. Keep the include list in `sdk/src/licenses.rs` synchronized when dependencies
 or retained notices change, and verify it against original dependency/toolchain files.

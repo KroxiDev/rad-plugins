@@ -1,0 +1,53 @@
+{
+  "contract": 1,
+  "id": "org.rad.metrics",
+  "version": {
+    "major": 0,
+    "minor": 1,
+    "patch": 0
+  },
+  "host_min": 2,
+  "host_max": 2,
+  "targets": [
+    "x86_64-unknown-linux-gnu"
+  ],
+  "actions": [],
+  "visuals": [
+    {
+      "id": "cpu",
+      "label": "CPU total",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": []
+    },
+    {
+      "id": "ram",
+      "label": "RAM used / available",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": []
+    },
+    {
+      "id": "gpu",
+      "label": "NVIDIA GPU utilization",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": []
+    },
+    {
+      "id": "vram",
+      "label": "NVIDIA VRAM used / total",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": []
+    }
+  ]
+}

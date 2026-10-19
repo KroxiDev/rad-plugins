@@ -1,5 +1,5 @@
 [workspace]
-members = ["sdk", "audio", "media", "obs"]
+members = ["sdk", "audio", "media", "obs", "metrics"]
 resolver = "2"
 
 [workspace.package]
