@@ -1,0 +1,311 @@
+{
+  "contract": 1,
+  "id": "org.rad.obs",
+  "version": {
+    "major": 0,
+    "minor": 1,
+    "patch": 0
+  },
+  "host_min": 3,
+  "host_max": 3,
+  "targets": [
+    "x86_64-unknown-linux-gnu"
+  ],
+  "actions": [
+    {
+      "id": "scene",
+      "label": "Change Program scene",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Program scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "filter",
+      "label": "Filter",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "source",
+            "label": "Source",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "filter",
+            "label": "Filter",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": [
+                "source"
+              ]
+            }
+          },
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "on",
+                "off",
+                "toggle"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "item",
+      "label": "Scene element",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "item",
+            "label": "Scene element",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": [
+                "scene"
+              ]
+            }
+          },
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "show",
+                "hide"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "record",
+      "label": "Recording",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "start",
+                "stop",
+                "pause",
+                "resume"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "stream",
+      "label": "Streaming",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "Operation",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "start",
+                "stop"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "wait",
+      "label": "Wait for OBS connection",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "timeout_seconds",
+            "label": "Timeout (seconds; default 30)",
+            "required": false,
+            "kind": {
+              "type": "integer",
+              "min": 1,
+              "max": 120
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "field": "timeout_seconds",
+        "default_seconds": 30
+      }
+    }
+  ],
+  "visuals": [
+    {
+      "id": "scene",
+      "label": "Scene state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Program scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "filter",
+      "label": "Filter state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "source",
+            "label": "Source",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "filter",
+            "label": "Filter",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": [
+                "source"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "item",
+      "label": "Item state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "item",
+            "label": "Scene element",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": [
+                "scene"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "record",
+      "label": "Record state",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": [
+        "password"
+      ]
+    },
+    {
+      "id": "stream",
+      "label": "Stream state",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": [
+        "password"
+      ]
+    }
+  ]
+}

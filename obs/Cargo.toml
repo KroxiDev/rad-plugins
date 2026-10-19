@@ -1,0 +1,30 @@
+[package]
+name = "rad-plugin-obs"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = { workspace = true }
+description = "Local OBS controls for RAD Action Deck"
+
+[dependencies]
+rad-plugin-sdk = { path = "../sdk" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+libc = { workspace = true }
+tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake"] }
+sha2 = "=0.10.9"
+base64 = "=0.23.1"
+zeroize = "=1.9.1"
+
+[features]
+test-support = []
+
+[[example]]
+name = "obs-fixture"
+required-features = ["test-support"]
+
+[[example]]
+name = "obs-conformance-server"
+path = "examples/conformance-server.rs"
+required-features = ["test-support"]
+test = true

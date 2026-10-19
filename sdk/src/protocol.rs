@@ -15,6 +15,7 @@ pub const MAX_CHOICES: usize = 64;
 pub const MAX_IMAGE_HEX: usize = 16_384;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,
@@ -23,6 +24,7 @@ pub struct Version {
 
 /// Ties a reply to its request; `generation` identifies the plugin process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Correlation {
     pub generation: u64,
     pub request: u64,
@@ -30,6 +32,7 @@ pub struct Correlation {
 
 /// Values of an action or visual source, already validated by the host against the manifest.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub schema_version: u32,
     pub values: Map<String, Value>,
@@ -42,6 +45,7 @@ impl Parameters {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Envelope {
     pub protocol: u32,
     pub correlation: Correlation,
@@ -49,7 +53,7 @@ pub struct Envelope {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Message {
     Hello {
         host_api: u32,
@@ -64,6 +68,8 @@ pub enum Message {
     Invoke {
         action: String,
         parameters: Parameters,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        credential_revision: Option<u64>,
     },
     Result {
         outcome: Outcome,
@@ -71,6 +77,8 @@ pub enum Message {
     Subscribe {
         source: String,
         parameters: Parameters,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        credential_revision: Option<u64>,
     },
     Unsubscribe {
         subscription: Correlation,
@@ -83,6 +91,21 @@ pub enum Message {
         definition: String,
         field: String,
         context: Parameters,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        credential_revision: Option<u64>,
+    },
+    Credentials {
+        revision: u64,
+        values: Vec<crate::CredentialValue>,
+    },
+    CredentialsApplied {
+        revision: u64,
+    },
+    CredentialsRelease {
+        revision: u64,
+    },
+    CredentialsReleased {
+        revision: u64,
     },
     Choices {
         list: ChoiceList,
@@ -121,6 +144,7 @@ pub enum VisualState {
 /// What a visual source shows. At least one of `text`, an image or `color` is required; an image
 /// is `png_hex` or `jpeg_hex`, never both (lowercase hex, even length, up to 16384 characters).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct VisualContent {
     pub text: Option<String>,
     pub png_hex: Option<String>,
@@ -147,6 +171,7 @@ pub enum ChoiceList {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ChoiceOption {
     /// What the host stores.
     pub value: String,

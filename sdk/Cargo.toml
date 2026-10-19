@@ -7,6 +7,7 @@ license = { workspace = true }
 description = "Minimal SDK for writing RAD Action Deck plugins: framing, protocol types, a dispatch loop and a RADP packer."
 
 [dependencies]
+zeroize = "=1.9.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 

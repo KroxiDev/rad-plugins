@@ -22,6 +22,7 @@ struct Inner {
     id: SubscriptionId,
     source: String,
     parameters: Parameters,
+    credentials: Option<crate::Credentials>,
     writer: Writer,
     state: Mutex<State>,
 }
@@ -37,11 +38,13 @@ impl Subscription {
         id: SubscriptionId,
         source: String,
         parameters: Parameters,
+        credentials: Option<crate::Credentials>,
     ) -> Self {
         Self(Arc::new(Inner {
             id,
             source,
             parameters,
+            credentials,
             writer,
             state: Mutex::new(State {
                 active: true,
@@ -57,6 +60,10 @@ impl Subscription {
     /// The visual source the host subscribed to.
     pub fn source(&self) -> &str {
         &self.0.source
+    }
+
+    pub fn credentials(&self) -> Option<&crate::Credentials> {
+        self.0.credentials.as_ref()
     }
 
     pub fn parameters(&self) -> &Parameters {
@@ -153,8 +160,12 @@ impl Registry {
         all
     }
 
-    fn snapshot(&self) -> Vec<Subscription> {
-        locked(&self.subscriptions).values().cloned().collect()
+    fn repeat_all(&self) {
+        // Removal waits for the heartbeat, so it never retains a credential handle
+        // after unsubscribe completed.
+        for subscription in locked(&self.subscriptions).values() {
+            subscription.repeat();
+        }
     }
 }
 
@@ -186,7 +197,7 @@ impl Heartbeat {
                     return;
                 }
                 drop(stopped);
-                registry.snapshot().iter().for_each(Subscription::repeat);
+                registry.repeat_all();
             }
         });
         Self {

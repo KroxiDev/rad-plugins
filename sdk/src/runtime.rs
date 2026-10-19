@@ -35,6 +35,7 @@ pub struct Config {
     /// Inclusive range of host APIs the plugin supports (`host_min..=host_max` of the manifest).
     pub host_api: RangeInclusive<u32>,
     heartbeat: Duration,
+    credential_slots: Vec<String>,
 }
 impl Config {
     pub fn new(id: impl Into<String>, version: Version, host_api: RangeInclusive<u32>) -> Self {
@@ -43,9 +44,15 @@ impl Config {
             version,
             host_api,
             heartbeat: DEFAULT_HEARTBEAT,
+            credential_slots: Vec::new(),
         }
     }
 
+    /// Declared union of credential slot IDs, matching the manifest.
+    pub fn credential_slots(mut self, slots: Vec<String>) -> Self {
+        self.credential_slots = slots;
+        self
+    }
     /// Period at which the last state of every subscription is repeated. Clamped to
     /// [`MAX_HEARTBEAT`].
     pub fn heartbeat(mut self, interval: Duration) -> Self {
@@ -57,6 +64,7 @@ impl Config {
 /// An action the host asks the plugin to run.
 #[derive(Debug, Clone)]
 pub struct Invoke {
+    pub credentials: Option<crate::Credentials>,
     pub action: String,
     pub parameters: Parameters,
 }
@@ -64,6 +72,7 @@ pub struct Invoke {
 /// A request for the current options of a dynamic choice field.
 #[derive(Debug, Clone)]
 pub struct OptionsQuery {
+    pub credentials: Option<crate::Credentials>,
     pub scope: OptionsScope,
     pub definition: String,
     pub field: String,
@@ -82,6 +91,9 @@ pub trait Plugin: Send + Sync + 'static {
     fn subscribe(&self, subscription: Subscription);
     /// The subscription ended, because the host asked or because the session closed.
     fn unsubscribe(&self, subscription: SubscriptionId);
+    /// Retire any external session belonging to this revision before returning.
+    /// Runs only after all operation handles have been dropped; do not block.
+    fn credentials_released(&self, _revision: u64) {}
 }
 
 /// Serves the host on `input`/`output` until the host closes the stream (`Ok`), breaks the
@@ -94,16 +106,22 @@ where
 {
     let writer = Writer::new(output);
     let mut input = BufReader::new(input);
-    let Some(generation) = handshake(&config, &mut input, &writer)? else {
+    let Some((generation, api)) = handshake(&config, &mut input, &writer)? else {
         return Ok(());
     };
-    let session = Session {
+    let credentials = crate::credentials::Registry::new(config.credential_slots)?;
+    if credentials.declared() && (api < 3 || *config.host_api.start() < 3) {
+        return Err(Error::Protocol("credentials require API 3"));
+    }
+    let mut session = Session {
+        api,
+        credentials,
         plugin,
         writer,
         generation,
         invocations: Slots::new(MAX_INVOCATIONS),
-        queries: Slots::new(MAX_OPTION_QUERIES),
-        subscriptions: Registry::new(MAX_SUBSCRIPTIONS),
+        queries: Slots::new(if api >= 3 { 2 } else { MAX_OPTION_QUERIES }),
+        subscriptions: Registry::new(if api >= 3 { 32 } else { MAX_SUBSCRIPTIONS }),
     };
     let heartbeat = Heartbeat::start(Arc::clone(&session.subscriptions), config.heartbeat);
     let result = session.serve(&mut input);
@@ -122,6 +140,8 @@ pub fn run_stdio<P: Plugin>(config: Config, plugin: P) -> Result<(), Error> {
 
 struct Session<P> {
     plugin: P,
+    api: u32,
+    credentials: crate::credentials::Registry,
     writer: Writer,
     generation: u64,
     invocations: Arc<Slots>,
@@ -130,53 +150,114 @@ struct Session<P> {
 }
 
 impl<P: Plugin> Session<P> {
-    fn serve(&self, input: &mut impl Read) -> Result<(), Error> {
+    fn serve(&mut self, input: &mut impl Read) -> Result<(), Error> {
+        let mut last_request = 1;
         while let Some(envelope) = next_envelope(input)? {
             let correlation = envelope.correlation;
             if correlation.generation != self.generation {
                 return Err(Error::Protocol("generation changed"));
             }
+            if self.api >= 3 && correlation.request <= last_request {
+                return Err(Error::Protocol("request reused"));
+            }
+            last_request = correlation.request;
             match envelope.message {
-                Message::Invoke { action, parameters } => match self.invocations.acquire() {
-                    Some(permit) => {
-                        let reply = Reply::new(self.writer.clone(), correlation, permit);
-                        guarded(|| self.plugin.invoke(Invoke { action, parameters }, reply));
-                    }
-                    None => self.writer.send(
-                        correlation,
-                        Message::Result {
-                            outcome: Outcome::Failure {
-                                code: FailureCode::Busy,
+                Message::Credentials { revision, values } if self.api >= 3 => {
+                    self.credentials.install(revision, values)?;
+                    self.writer
+                        .send(correlation, Message::CredentialsApplied { revision })?;
+                }
+                Message::CredentialsRelease { revision } if self.api >= 3 => {
+                    self.credentials.release(revision)?;
+                    // A failed cleanup cannot acknowledge external resources released.
+                    catch_unwind(AssertUnwindSafe(|| {
+                        self.plugin.credentials_released(revision)
+                    }))
+                    .map_err(|_| Error::Protocol("credential release handler failed"))?;
+                    self.writer
+                        .send(correlation, Message::CredentialsReleased { revision })?;
+                }
+                Message::Invoke {
+                    action,
+                    parameters,
+                    credential_revision,
+                } => {
+                    let credentials = self.credentials.acquire(credential_revision)?;
+                    match self.invocations.acquire() {
+                        Some(permit) => {
+                            let reply = Reply::new(
+                                self.writer.clone(),
+                                correlation,
+                                permit,
+                                credentials.clone(),
+                            );
+                            guarded(|| {
+                                self.plugin.invoke(
+                                    Invoke {
+                                        action,
+                                        parameters,
+                                        credentials,
+                                    },
+                                    reply,
+                                )
+                            });
+                        }
+                        None => self.writer.send(
+                            correlation,
+                            Message::Result {
+                                outcome: Outcome::Failure {
+                                    code: FailureCode::Busy,
+                                },
                             },
-                        },
-                    )?,
-                },
+                        )?,
+                    }
+                }
                 Message::Options {
                     scope,
                     definition,
                     field,
                     context,
-                } => match self.queries.acquire() {
-                    Some(permit) => {
-                        let reply = Reply::new(self.writer.clone(), correlation, permit);
-                        let query = OptionsQuery {
-                            scope,
-                            definition,
-                            field,
-                            context,
-                        };
-                        guarded(|| self.plugin.options(query, reply));
+                    credential_revision,
+                } if self.api >= 2 => {
+                    let credentials = self.credentials.acquire(credential_revision)?;
+                    match self.queries.acquire() {
+                        Some(permit) => {
+                            let reply = Reply::new(
+                                self.writer.clone(),
+                                correlation,
+                                permit,
+                                credentials.clone(),
+                            );
+                            let query = OptionsQuery {
+                                credentials,
+                                scope,
+                                definition,
+                                field,
+                                context,
+                            };
+                            guarded(|| self.plugin.options(query, reply));
+                        }
+                        None => self.writer.send(
+                            correlation,
+                            Message::Choices {
+                                list: ChoiceList::Unavailable,
+                            },
+                        )?,
                     }
-                    None => self.writer.send(
+                }
+                Message::Subscribe {
+                    source,
+                    parameters,
+                    credential_revision,
+                } => {
+                    let credentials = self.credentials.acquire(credential_revision)?;
+                    let subscription = Subscription::new(
+                        self.writer.clone(),
                         correlation,
-                        Message::Choices {
-                            list: ChoiceList::Unavailable,
-                        },
-                    )?,
-                },
-                Message::Subscribe { source, parameters } => {
-                    let subscription =
-                        Subscription::new(self.writer.clone(), correlation, source, parameters);
+                        source,
+                        parameters,
+                        credentials,
+                    );
                     match self.subscriptions.insert(&subscription) {
                         Ok(()) => guarded(|| self.plugin.subscribe(subscription)),
                         Err(Refused::Full) => subscription.update(crate::VisualState::Unavailable),
@@ -206,7 +287,10 @@ fn next_envelope(input: &mut impl Read) -> Result<Option<Envelope>, Error> {
     let Some(payload) = frame::read(input)? else {
         return Ok(None);
     };
-    let envelope: Envelope = serde_json::from_slice(&payload)?;
+    let payload = zeroize::Zeroizing::new(payload);
+    crate::json::validate(&payload).map_err(|_| Error::Protocol("invalid message"))?;
+    let envelope: Envelope =
+        serde_json::from_slice(&payload).map_err(|_| Error::Protocol("invalid message"))?;
     if envelope.protocol != PROTOCOL {
         return Err(Error::Protocol("unsupported protocol version"));
     }
@@ -221,7 +305,7 @@ fn handshake(
     config: &Config,
     input: &mut impl Read,
     writer: &Writer,
-) -> Result<Option<u64>, Error> {
+) -> Result<Option<(u64, u32)>, Error> {
     let Some(envelope) = next_envelope(input)? else {
         return Ok(None);
     };
@@ -245,5 +329,5 @@ fn handshake(
             plugin_version: config.version,
         },
     )?;
-    Ok(Some(envelope.correlation.generation))
+    Ok(Some((envelope.correlation.generation, host_api)))
 }

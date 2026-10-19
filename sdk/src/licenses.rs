@@ -9,6 +9,120 @@ const TEXT: &str = concat!(
     include_str!("../../LICENSE"),
     "\n===== notices/README.md =====\n",
     include_str!("../../notices/README.md"),
+    "\n===== notices/base64-0.23.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/base64-0.23.1/LICENSE-APACHE"),
+    "\n===== notices/base64-0.23.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/base64-0.23.1/LICENSE-MIT"),
+    "\n===== notices/block-buffer-0.10.4/LICENSE-APACHE =====\n",
+    include_str!("../../notices/block-buffer-0.10.4/LICENSE-APACHE"),
+    "\n===== notices/block-buffer-0.10.4/LICENSE-MIT =====\n",
+    include_str!("../../notices/block-buffer-0.10.4/LICENSE-MIT"),
+    "\n===== notices/block-buffer-0.12.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/block-buffer-0.12.1/LICENSE-APACHE"),
+    "\n===== notices/block-buffer-0.12.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/block-buffer-0.12.1/LICENSE-MIT"),
+    "\n===== notices/bytes-1.12.1/LICENSE =====\n",
+    include_str!("../../notices/bytes-1.12.1/LICENSE"),
+    "\n===== notices/chacha20-0.10.2/LICENSE-APACHE =====\n",
+    include_str!("../../notices/chacha20-0.10.2/LICENSE-APACHE"),
+    "\n===== notices/chacha20-0.10.2/LICENSE-MIT =====\n",
+    include_str!("../../notices/chacha20-0.10.2/LICENSE-MIT"),
+    "\n===== notices/const-oid-0.10.2/LICENSE-APACHE =====\n",
+    include_str!("../../notices/const-oid-0.10.2/LICENSE-APACHE"),
+    "\n===== notices/const-oid-0.10.2/LICENSE-MIT =====\n",
+    include_str!("../../notices/const-oid-0.10.2/LICENSE-MIT"),
+    "\n===== notices/cpufeatures-0.2.17/LICENSE-APACHE =====\n",
+    include_str!("../../notices/cpufeatures-0.2.17/LICENSE-APACHE"),
+    "\n===== notices/cpufeatures-0.2.17/LICENSE-MIT =====\n",
+    include_str!("../../notices/cpufeatures-0.2.17/LICENSE-MIT"),
+    "\n===== notices/cpufeatures-0.3.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/cpufeatures-0.3.1/LICENSE-APACHE"),
+    "\n===== notices/cpufeatures-0.3.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/cpufeatures-0.3.1/LICENSE-MIT"),
+    "\n===== notices/crypto-common-0.1.7/LICENSE-APACHE =====\n",
+    include_str!("../../notices/crypto-common-0.1.7/LICENSE-APACHE"),
+    "\n===== notices/crypto-common-0.1.7/LICENSE-MIT =====\n",
+    include_str!("../../notices/crypto-common-0.1.7/LICENSE-MIT"),
+    "\n===== notices/crypto-common-0.2.2/LICENSE-APACHE =====\n",
+    include_str!("../../notices/crypto-common-0.2.2/LICENSE-APACHE"),
+    "\n===== notices/crypto-common-0.2.2/LICENSE-MIT =====\n",
+    include_str!("../../notices/crypto-common-0.2.2/LICENSE-MIT"),
+    "\n===== notices/data-encoding-2.11.1/LICENSE =====\n",
+    include_str!("../../notices/data-encoding-2.11.1/LICENSE"),
+    "\n===== notices/digest-0.10.7/LICENSE-APACHE =====\n",
+    include_str!("../../notices/digest-0.10.7/LICENSE-APACHE"),
+    "\n===== notices/digest-0.10.7/LICENSE-MIT =====\n",
+    include_str!("../../notices/digest-0.10.7/LICENSE-MIT"),
+    "\n===== notices/digest-0.11.3/LICENSE-APACHE =====\n",
+    include_str!("../../notices/digest-0.11.3/LICENSE-APACHE"),
+    "\n===== notices/digest-0.11.3/LICENSE-MIT =====\n",
+    include_str!("../../notices/digest-0.11.3/LICENSE-MIT"),
+    "\n===== notices/generic-array-0.14.7/LICENSE =====\n",
+    include_str!("../../notices/generic-array-0.14.7/LICENSE"),
+    "\n===== notices/getrandom-0.4.3/LICENSE-APACHE =====\n",
+    include_str!("../../notices/getrandom-0.4.3/LICENSE-APACHE"),
+    "\n===== notices/getrandom-0.4.3/LICENSE-MIT =====\n",
+    include_str!("../../notices/getrandom-0.4.3/LICENSE-MIT"),
+    "\n===== notices/http-1.5.0/LICENSE-APACHE =====\n",
+    include_str!("../../notices/http-1.5.0/LICENSE-APACHE"),
+    "\n===== notices/http-1.5.0/LICENSE-MIT =====\n",
+    include_str!("../../notices/http-1.5.0/LICENSE-MIT"),
+    "\n===== notices/httparse-1.10.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/httparse-1.10.1/LICENSE-APACHE"),
+    "\n===== notices/httparse-1.10.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/httparse-1.10.1/LICENSE-MIT"),
+    "\n===== notices/hybrid-array-0.4.15/LICENSE-APACHE =====\n",
+    include_str!("../../notices/hybrid-array-0.4.15/LICENSE-APACHE"),
+    "\n===== notices/hybrid-array-0.4.15/LICENSE-MIT =====\n",
+    include_str!("../../notices/hybrid-array-0.4.15/LICENSE-MIT"),
+    "\n===== notices/log-0.4.34/LICENSE-APACHE =====\n",
+    include_str!("../../notices/log-0.4.34/LICENSE-APACHE"),
+    "\n===== notices/log-0.4.34/LICENSE-MIT =====\n",
+    include_str!("../../notices/log-0.4.34/LICENSE-MIT"),
+    "\n===== notices/r-efi-6.0.0/AUTHORS =====\n",
+    include_str!("../../notices/r-efi-6.0.0/AUTHORS"),
+    "\n===== notices/rand-0.10.3/COPYRIGHT =====\n",
+    include_str!("../../notices/rand-0.10.3/COPYRIGHT"),
+    "\n===== notices/rand-0.10.3/LICENSE-APACHE =====\n",
+    include_str!("../../notices/rand-0.10.3/LICENSE-APACHE"),
+    "\n===== notices/rand-0.10.3/LICENSE-MIT =====\n",
+    include_str!("../../notices/rand-0.10.3/LICENSE-MIT"),
+    "\n===== notices/rand_core-0.10.1/COPYRIGHT =====\n",
+    include_str!("../../notices/rand_core-0.10.1/COPYRIGHT"),
+    "\n===== notices/rand_core-0.10.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/rand_core-0.10.1/LICENSE-APACHE"),
+    "\n===== notices/rand_core-0.10.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/rand_core-0.10.1/LICENSE-MIT"),
+    "\n===== notices/sha1-0.11.0/LICENSE-APACHE =====\n",
+    include_str!("../../notices/sha1-0.11.0/LICENSE-APACHE"),
+    "\n===== notices/sha1-0.11.0/LICENSE-MIT =====\n",
+    include_str!("../../notices/sha1-0.11.0/LICENSE-MIT"),
+    "\n===== notices/sha2-0.10.9/LICENSE-APACHE =====\n",
+    include_str!("../../notices/sha2-0.10.9/LICENSE-APACHE"),
+    "\n===== notices/sha2-0.10.9/LICENSE-MIT =====\n",
+    include_str!("../../notices/sha2-0.10.9/LICENSE-MIT"),
+    "\n===== notices/thiserror-2.0.21/LICENSE-APACHE =====\n",
+    include_str!("../../notices/thiserror-2.0.21/LICENSE-APACHE"),
+    "\n===== notices/thiserror-2.0.21/LICENSE-MIT =====\n",
+    include_str!("../../notices/thiserror-2.0.21/LICENSE-MIT"),
+    "\n===== notices/thiserror-impl-2.0.21/LICENSE-APACHE =====\n",
+    include_str!("../../notices/thiserror-impl-2.0.21/LICENSE-APACHE"),
+    "\n===== notices/thiserror-impl-2.0.21/LICENSE-MIT =====\n",
+    include_str!("../../notices/thiserror-impl-2.0.21/LICENSE-MIT"),
+    "\n===== notices/tungstenite-0.30.0/LICENSE-APACHE =====\n",
+    include_str!("../../notices/tungstenite-0.30.0/LICENSE-APACHE"),
+    "\n===== notices/tungstenite-0.30.0/LICENSE-MIT =====\n",
+    include_str!("../../notices/tungstenite-0.30.0/LICENSE-MIT"),
+    "\n===== notices/typenum-1.20.1/LICENSE =====\n",
+    include_str!("../../notices/typenum-1.20.1/LICENSE"),
+    "\n===== notices/typenum-1.20.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/typenum-1.20.1/LICENSE-APACHE"),
+    "\n===== notices/typenum-1.20.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/typenum-1.20.1/LICENSE-MIT"),
+    "\n===== notices/version_check-0.9.5/LICENSE-APACHE =====\n",
+    include_str!("../../notices/version_check-0.9.5/LICENSE-APACHE"),
+    "\n===== notices/version_check-0.9.5/LICENSE-MIT =====\n",
+    include_str!("../../notices/version_check-0.9.5/LICENSE-MIT"),
     "\n===== notices/adler2-2.0.1/LICENSE-0BSD =====\n",
     include_str!("../../notices/adler2-2.0.1/LICENSE-0BSD"),
     "\n===== notices/adler2-2.0.1/LICENSE-APACHE =====\n",
@@ -275,6 +389,10 @@ const TEXT: &str = concat!(
     include_str!("../../notices/windows-sys-0.61.2/license-mit"),
     "\n===== notices/winnow-1.0.4/LICENSE-MIT =====\n",
     include_str!("../../notices/winnow-1.0.4/LICENSE-MIT"),
+    "\n===== notices/zeroize-1.9.1/LICENSE-APACHE =====\n",
+    include_str!("../../notices/zeroize-1.9.1/LICENSE-APACHE"),
+    "\n===== notices/zeroize-1.9.1/LICENSE-MIT =====\n",
+    include_str!("../../notices/zeroize-1.9.1/LICENSE-MIT"),
     "\n===== notices/zlib-rs-0.6.8/LICENSE =====\n",
     include_str!("../../notices/zlib-rs-0.6.8/LICENSE"),
     "\n===== notices/zmij-1.0.23/LICENSE-MIT =====\n",
@@ -312,4 +430,47 @@ pub fn licenses_exit() -> Option<ExitCode> {
             }
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn embedded_notices_retain_all_distributed_originals() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../notices");
+        let mut directories = vec![root.clone()];
+        while let Some(directory) = directories.pop() {
+            for entry in std::fs::read_dir(directory).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    directories.push(path);
+                } else {
+                    let name = path.strip_prefix(&root).unwrap().to_str().unwrap();
+                    let original = std::fs::read_to_string(&path).unwrap();
+                    let section = format!("\n===== notices/{name} =====\n{original}");
+                    assert!(super::TEXT.contains(&section), "missing complete {name}");
+                }
+            }
+        }
+        assert!(super::TEXT.contains(
+            "===== notices/tungstenite-0.30.0/LICENSE-MIT =====\nCopyright (c) 2017 Alexey Galakhov"
+        ));
+    }
+
+    #[test]
+    fn embedded_notices_retain_zeroize_license_texts() {
+        assert!(super::TEXT.contains("Copyright (c) 2018-2026 The RustCrypto Project Developers"));
+        for (name, text) in [
+            (
+                "LICENSE-APACHE",
+                include_str!("../../notices/zeroize-1.9.1/LICENSE-APACHE"),
+            ),
+            (
+                "LICENSE-MIT",
+                include_str!("../../notices/zeroize-1.9.1/LICENSE-MIT"),
+            ),
+        ] {
+            let section = format!("\n===== notices/zeroize-1.9.1/{name} =====\n{text}");
+            assert!(super::TEXT.contains(&section), "missing complete {name}");
+        }
+    }
 }

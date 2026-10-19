@@ -97,21 +97,29 @@ pub struct Reply<T: Answer> {
     writer: Writer,
     correlation: Correlation,
     answered: bool,
+    _credentials: Option<crate::Credentials>,
     _permit: Permit,
     _answer: PhantomData<fn(T)>,
 }
 impl<T: Answer> Reply<T> {
-    pub(crate) fn new(writer: Writer, correlation: Correlation, permit: Permit) -> Self {
+    pub(crate) fn new(
+        writer: Writer,
+        correlation: Correlation,
+        permit: Permit,
+        credentials: Option<crate::Credentials>,
+    ) -> Self {
         Self {
             writer,
             correlation,
             answered: false,
+            _credentials: credentials,
             _permit: permit,
             _answer: PhantomData,
         }
     }
 
     pub fn send(mut self, answer: T) {
+        self._credentials.take();
         self.answered = true;
         self.write(answer);
     }
@@ -131,6 +139,7 @@ impl<T: Answer> Reply<T> {
 }
 impl<T: Answer> Drop for Reply<T> {
     fn drop(&mut self) {
+        self._credentials.take();
         if !self.answered {
             self.write(T::fallback());
         }

@@ -40,3 +40,8 @@ pub use protocol::*;
 pub use reply::{Answer, Reply};
 pub use runtime::*;
 pub use subscription::{Subscription, SubscriptionId};
+
+mod credentials;
+pub use credentials::{CredentialValue, Credentials, MAX_CREDENTIAL_REVISIONS};
+
+mod json;

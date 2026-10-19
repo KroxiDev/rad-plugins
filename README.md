@@ -9,19 +9,22 @@ workspace: it does not depend on any RAD crate, it implements the documented plu
 | [`sdk`](sdk) | `rad-plugin-sdk` | Framing, protocol types, the handshake and dispatch loop with deferred replies and visual heartbeats, and the `radp-pack` packer. |
 | [`audio`](audio) | `rad-plugin-audio` | Mute, unmute and toggle the microphone and the audio output through `pactl`. |
 | [`media`](media) | `rad-plugin-media` | Control a media player (play, pause, stop, previous, next) and show its cover through MPRIS on the session D-Bus. |
+| [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
 
 ## Build, test, package
 
 ```sh
-cargo build --release
-cargo test                       # also builds the helper examples the tests use
-cargo clippy --all-targets -- -D warnings
+cargo build --locked --release --workspace --all-features --bins --examples
+cargo test --locked --release --workspace --all-features
+cargo clippy --locked --release --workspace --all-features --all-targets -- -D warnings
 ```
 
 `cargo test` runs without touching real audio: the tests drive a fake `pactl`. The media plugin's
 tests run against a private `dbus-daemon` (it must be installed) with fake MPRIS players, never the
-session bus. If you run a single test target (`cargo test --test process`), build the helpers first
-with `cargo build --examples`.
+session bus. OBS tests use synthetic credentials and fake loopback servers on ephemeral ports,
+never an installed OBS instance or its default port. `test-support` enables fixture constructors and examples;
+it does not change the production OBS endpoint. If you run a single test target (`cargo test --test process`),
+build the helper examples first. With an already populated cache, add `--offline` to these commands.
 
 A plugin package (`.radp`) is the manifest and the executable in one file:
 
@@ -71,8 +74,10 @@ What the SDK does for you:
   answering) a host API outside the range in `Config`.
 - **Deferred replies.** `invoke` and `options` get a `Reply` that can be completed later, from any
   thread. A reply dropped without an answer still answers (`failed` / `unavailable`).
-- **Bounded concurrency.** At most 16 actions run at once (the 17th is answered `busy`) and at most 4
-  option queries (extra ones are answered `unavailable`); nothing is queued. A handler that panics
+- **Bounded concurrency.** At most 16 actions run at once (the 17th is answered `busy`). API1/2 allow
+  4 option queries and 64 subscriptions; API3 allows 2 queries and 32 subscriptions. The host's
+  limits remain 2 queries and 32 subscriptions for every API. Extra queries are answered `unavailable`;
+  nothing is queued. A handler that panics
   fails only its own request.
 - **Visual heartbeat.** The host treats a visual source as stale one second after its last message.
   Every `Subscription` has its last state repeated every 400 ms (never more than 500 ms).
@@ -128,17 +133,52 @@ Visual content contains text, RGBA color, and/or one lowercase-hex PNG/JPEG imag
 The host validates/normalizes images independently. The SDK repeats current visual
 state every 400 ms by default; the host marks it stale after 1000 ms without an
 update. Dynamic choices and JPEG need negotiated API 2; the envelope protocol and
-manifest contract remain version 1. No credentials or network administration are
-part of these plugins. See the SDK source for validation and resource constants.
+manifest contract remain version 1. Audio/media do not use credentials or network administration.
+See the SDK source for validation and resource constants.
+
+## Host API3: immutable credentials and connection-wait budget
+
+API3 keeps envelope protocol1 and manifest contract1. A manifest declaring credential slots
+requires `host_min >= 3`, at most32 distinct slots across its definitions. Configure the SDK with
+`Config::credential_slots(...)` matching that union. Secrets are never ordinary Parameters,
+configuration, options, visual content or logs; applications store and deliver them separately.
+
+| Direction | Message (`kind`) | Fields |
+|---|---|---|
+| Host → plugin | `credentials` | positive monotonic `revision`, `values: [{slot,value}]` |
+| Plugin → host | `credentials_applied` | same `revision`, correlated ACK |
+| Host → plugin | `credentials_release` | `revision` to retire |
+| Plugin → host | `credentials_released` | same `revision`, correlated ACK after cleanup |
+
+API3 Invoke/Options/Subscribe carry `credential_revision` for a plugin declaring slots.
+The host waits for Applied before sending an operation, and releases only after all owners,
+including residual work and admitted future steps, are gone. There are at most67 retained maps,
+32 entries/map,4096 UTF-8 bytes/value and8192 bytes/map. Empty present differs from omitted.
+Installation/release ACK deadline is2000ms. Installing new credentials does not mutate older maps.
+Legacy API1/2 messages omit the new optional operation field.
+
+`Invoke.credentials`, `OptionsQuery.credentials` and `Subscription::credentials()` provide
+immutable handles with `revision()` and borrowed `get(slot)`. Drop completed call/query handles
+before `reply.send(...)`; deferred work and subscriptions retain theirs until actually finished.
+Do not retain a Credentials handle in an idle external session: it prevents release. Key sessions
+by revision and retire their external resources synchronously in
+`Plugin::credentials_released(revision)`, **before returning** and the SDK's ACK. A release with
+live handles fails closed; a timeout is not proof of cancellation or released resources.
+
+An API3 action may declare optional `response_timeout: {field,default_seconds}`. The named schema
+field must be an optional integer with exact bounds1..120; the default is in that range. The host
+captures its budget at admission and counts it from dispatch. Ordinary definitions keep5000ms;
+the OBS connection wait uses30s by default. This metadata is not valid on visual definitions or
+API1/2. It does not introduce retries, cancellation or a new dynamic-options protocol.
 
 ## Licenses and distribution
 
 Project code is [MIT licensed](LICENSE). This does **not** relicense dependencies;
 [third-party notices](notices/README.md) preserve their original terms and texts,
 including conservatively retained build/target-specific and Rust library notices.
-The source tree includes those copies. Both plugin executables embed all retained
+The source tree includes those copies. All plugin executables embed all retained
 texts and print them with `--licenses` as their first argument, then exit without
-reading host input or connecting to audio/D-Bus. The notices therefore travel inside
+reading host input or connecting to audio/D-Bus/OBS. The notices therefore travel inside
 the executable even in the two-blob RADP container. Output failure returns a nonzero
 exit code. Keep the include list in `sdk/src/licenses.rs` synchronized when dependencies
 or retained notices change, and verify it against original dependency/toolchain files.

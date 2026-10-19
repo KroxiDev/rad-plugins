@@ -70,12 +70,12 @@ pub fn read<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, FrameError> {
     }
     let len = u32::from_be_bytes(header) as usize;
     check_len(len)?;
-    let mut payload = vec![0u8; len];
+    let mut payload = zeroize::Zeroizing::new(vec![0u8; len]);
     reader
         .read_exact(&mut payload)
         .map_err(|e| match e.kind() {
             io::ErrorKind::UnexpectedEof => FrameError::Truncated,
             _ => FrameError::Io(e),
         })?;
-    Ok(Some(payload))
+    Ok(Some(std::mem::take(&mut *payload)))
 }
