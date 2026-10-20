@@ -15,14 +15,14 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
     assert_eq!(manifest["contract"], 1);
     assert_eq!(manifest["id"], config.id);
     assert_eq!(manifest["id"], "org.rad.media");
-    assert_eq!(manifest["version"], json!({"major":0,"minor":1,"patch":0}));
+    assert_eq!(manifest["version"], json!({"major":0,"minor":1,"patch":1}));
     assert_eq!(
         (
             config.version.major,
             config.version.minor,
             config.version.patch
         ),
-        (0, 1, 0)
+        (0, 1, 1)
     );
     assert_eq!(manifest["host_min"], *config.host_api.start());
     assert_eq!(manifest["host_max"], *config.host_api.end());

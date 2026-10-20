@@ -60,6 +60,11 @@ impl Reader {
             }
             _ => VisualState::Unavailable,
         };
+        let _connection = match bus.connection(deadline) {
+            Ok(connection) => connection,
+            Err(Failure::Unavailable) => return VisualState::Unavailable,
+            Err(_) => return stale(),
+        };
         let names = match bus.player_names(deadline) {
             Ok(names) => names,
             Err(Failure::Unavailable) => return VisualState::Unavailable,

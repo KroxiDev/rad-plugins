@@ -89,7 +89,7 @@ impl Host {
         host.send(
             1,
             json!({"kind":"hello","host_api":2,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":0}}),
+                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":1}}),
         );
         let ready = host
             .take(|f| f["message"]["kind"] == "ready", Duration::from_secs(5))

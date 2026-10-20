@@ -82,12 +82,16 @@ impl Nvml {
         }
     }
     pub fn read(&self) -> (Option<u32>, Option<Memory>) {
+        self.read_selected(true, true)
+    }
+    pub(crate) fn read_selected(&self, gpu: bool, vram: bool) -> (Option<u32>, Option<Memory>) {
         let (mut util, mut mem) = (Utilization::default(), DeviceMemory::default());
         // SAFETY: loaded function signatures and repr(C) outputs match NVML.
-        let gpu = unsafe { (self.utilization)(self.device, &mut util) == 0 }
+        let gpu = (gpu && unsafe { (self.utilization)(self.device, &mut util) == 0 })
             .then_some(util.gpu)
             .filter(|v| *v <= 100);
-        let memory = if unsafe { (self.memory)(self.device, &mut mem) == 0 }
+        let memory = if vram
+            && unsafe { (self.memory)(self.device, &mut mem) == 0 }
             && mem.total > 0
             && mem.used <= mem.total
             && mem.free <= mem.total

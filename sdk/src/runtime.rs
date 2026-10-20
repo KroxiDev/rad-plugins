@@ -27,6 +27,9 @@ pub const MAX_OPTION_QUERIES: usize = 4;
 pub const MAX_SUBSCRIPTIONS: usize = 64;
 
 /// Identity and runtime settings of a plugin.
+///
+/// Process lifecycle is static manifest metadata (`on_demand` by default or an
+/// explicit `always_loaded`), not a setting negotiated through this configuration.
 #[derive(Debug, Clone)]
 pub struct Config {
     /// Plugin id, as in the manifest.
@@ -81,15 +84,25 @@ pub struct OptionsQuery {
 
 /// The behaviour of a plugin. Methods run on the loop's thread and must return quickly: do slow
 /// work on another thread and complete the [`Reply`] or [`Subscription`] from there.
+///
+/// Construct on-demand implementations without opening external resources. Acquire only
+/// resources needed by each handler, share them among compatible consumers, and release
+/// them after the last consumer's actual work ends. Keep credential revisions isolated.
+/// On reactivation, refresh current state without replaying previous actions.
+/// The SDK dispatches demand; it cannot manage arbitrary implementation-owned resources.
 pub trait Plugin: Send + Sync + 'static {
     /// Run an action. Dropping `reply` unanswered answers `failed`.
+    /// Action resources may be acquired here rather than prewarmed on process startup.
     fn invoke(&self, call: Invoke, reply: Reply<Outcome>);
     /// List the options of a dynamic choice field. Dropping `reply` unanswered answers
     /// `unavailable`.
+    /// Acquire only this query's resources; listing options must not invoke an action.
     fn options(&self, query: OptionsQuery, reply: Reply<ChoiceList>);
     /// The host subscribed to a visual source. Publish its state with [`Subscription::update`].
+    /// Share required resources with compatible consumers instead of duplicating readers.
     fn subscribe(&self, subscription: Subscription);
     /// The subscription ended, because the host asked or because the session closed.
+    /// Release this consumer and stop resources whose last consumer has gone.
     fn unsubscribe(&self, subscription: SubscriptionId);
     /// Retire any external session belonging to this revision before returning.
     /// Runs only after all operation handles have been dropped; do not block.

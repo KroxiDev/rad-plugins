@@ -1,14 +1,13 @@
 //! The plugin as a process, speaking the protocol over real pipes with a minimal environment.
 //!
-//! The binary under test is the real one. It is only ever pointed at a private, empty
-//! `XDG_RUNTIME_DIR`, so the real `pactl` cannot reach any sound server, and the only action sent
-//! names a device that does not exist, so nothing could be muted even if one answered.
+//! The real binary runs inside a private filesystem and network namespace. This requires
+//! bubblewrap and enabled Linux namespaces; setup failures fail the test, never skip it.
 mod support;
 use serde_json::{Value, json};
 use std::{
     fs,
     io::{Read, Write},
-    path::{Path, PathBuf},
+    path::Path,
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     time::Duration,
 };
@@ -25,7 +24,7 @@ impl Process {
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()
             .expect("spawn plugin");
         let stdin = child.stdin.take();
@@ -79,46 +78,103 @@ impl Drop for Process {
     }
 }
 
-fn private_runtime() -> PathBuf {
+// All executables in the no-server tests go through this boundary.
+fn isolated_command(binary: &Path) -> Command {
+    let mut command = Command::new("/usr/bin/bwrap");
+    command.env_clear().args([
+        "--die-with-parent",
+        "--unshare-all",
+        "--new-session",
+        "--tmpfs",
+        "/",
+        "--ro-bind",
+        "/usr",
+        "/usr",
+    ]);
+    // Both merged-/usr and traditional Linux library layouts are supported.
+    for path in ["/lib", "/lib64"] {
+        if Path::new(path).exists() {
+            command.args(["--ro-bind", path, path]);
+        }
+    }
+    command
+        .args([
+            "--symlink",
+            "usr/bin",
+            "/bin",
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "--dir",
+            "/home/test",
+            "--dir",
+            "/run/user/test",
+            "--dir",
+            "/tmp",
+            "--setenv",
+            "HOME",
+            "/home/test",
+            "--setenv",
+            "XDG_RUNTIME_DIR",
+            "/run/user/test",
+            "--chdir",
+            "/home/test",
+            "--ro-bind",
+        ])
+        .arg(binary)
+        .arg("/test-program")
+        .arg("--")
+        .arg("/test-program");
+    command
+}
+
+#[test]
+fn no_server_boundary_hides_host_paths_and_network() {
+    use std::os::unix::net::UnixListener;
     let dir =
-        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("runtime-{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
+        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("isolation-{}", std::process::id()));
     fs::create_dir_all(&dir).unwrap();
-    dir
+    let socket = dir.join("guard.sock");
+    let _guard = UnixListener::bind(&socket).unwrap();
+    let network = fs::read_link("/proc/self/ns/net").unwrap();
+    let output = isolated_command(Path::new("/usr/bin/sh"))
+        .args([
+            "-c",
+            r#"
+            test ! -e "$1" || exit 41
+            network=$(/usr/bin/readlink /proc/self/ns/net) || exit 42
+            test "$network" != "$2" || exit 42
+            test "$HOME" = /home/test || exit 43
+            test "$XDG_RUNTIME_DIR" = /run/user/test || exit 44
+            test ! -e /dev/snd || exit 45
+            test ! -e /run/pulse || exit 46
+            test ! -e /etc/pulse || exit 47
+        "#,
+            "guard",
+        ])
+        .arg(&socket)
+        .arg(network)
+        .output()
+        .expect("run isolated guard (requires bwrap and Linux namespaces)");
+    fs::remove_dir_all(dir).unwrap();
+    assert!(
+        output.status.success(),
+        "isolation guard: {:?}: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
-/// Whether the system `pactl`, started the way the plugin starts it, finds no server in `dir`.
-/// If one answered (say, a system-wide daemon), these tests stand down rather than risk it.
-fn cannot_reach_a_server(dir: &Path) -> bool {
-    let Some(_) = rad_plugin_audio::Pactl::system() else {
-        return true;
-    };
-    let status = Command::new("/usr/bin/pactl")
-        .arg("info")
-        .env_clear()
-        .env("XDG_RUNTIME_DIR", dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-    !matches!(status, Ok(s) if s.success())
-}
-
-fn real_plugin(runtime: &Path) -> Process {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_rad-plugin-audio"));
-    // What RAD gives a plugin: no PATH, nothing but the runtime directory.
-    command.env_clear().env("XDG_RUNTIME_DIR", runtime);
-    Process::spawn(command)
+fn real_plugin() -> Process {
+    Process::spawn(isolated_command(Path::new(env!(
+        "CARGO_BIN_EXE_rad-plugin-audio"
+    ))))
 }
 
 #[test]
 fn the_real_binary_handshakes_and_reports_everything_unavailable_without_a_server() {
-    let runtime = private_runtime();
-    if !cannot_reach_a_server(&runtime) {
-        eprintln!("skipped: a sound server answered a private runtime directory");
-        return;
-    }
-    let mut plugin = real_plugin(&runtime);
+    let mut plugin = real_plugin();
     plugin.hello(2);
     let ready = plugin.recv().expect("ready");
     assert_eq!(ready["correlation"], json!({"generation":3,"request":1}));
@@ -165,13 +221,11 @@ fn the_real_binary_handshakes_and_reports_everything_unavailable_without_a_serve
     plugin.close_input();
     let status = plugin.child.wait().unwrap();
     assert!(status.success(), "{status:?}");
-    let _ = fs::remove_dir_all(&runtime);
 }
 
 #[test]
 fn the_real_binary_refuses_a_host_api_it_does_not_support() {
-    let runtime = private_runtime();
-    let mut plugin = real_plugin(&runtime);
+    let mut plugin = real_plugin();
     plugin.hello(1);
     assert!(
         plugin.recv().is_none(),
@@ -179,7 +233,6 @@ fn the_real_binary_refuses_a_host_api_it_does_not_support() {
     );
     let status = plugin.child.wait().unwrap();
     assert!(!status.success(), "{status:?}");
-    let _ = fs::remove_dir_all(&runtime);
 }
 
 #[test]

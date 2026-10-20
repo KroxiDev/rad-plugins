@@ -48,9 +48,12 @@ fn sdk_heartbeat_never_revives_stale_metrics_and_eof_does_not_join_driver() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":2,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":2,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
-    assert_eq!(recv(&mut host)["message"]["kind"], "ready");
+    let ready = recv(&mut host);
+    assert_eq!(ready["message"]["kind"], "ready");
+    let manifest: Value = serde_json::from_str(include_str!("../manifest.json")).unwrap();
+    assert_eq!(ready["message"]["plugin_version"], manifest["version"]);
     send(
         &mut host,
         2,

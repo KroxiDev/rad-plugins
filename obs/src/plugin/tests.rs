@@ -88,7 +88,7 @@ fn scripted(
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -119,6 +119,7 @@ fn sdk_options_return_live_scene_identity_not_labels_as_ids() {
         .as_str()
         .unwrap();
     assert_eq!(crate::workflow::target(value).unwrap().collection, "C");
+    assert_server_finished(&server);
     drop(host);
     assert!(run.join().unwrap().is_ok());
     server.join().unwrap();
@@ -203,11 +204,12 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
     host.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
     let input = peer.try_clone().unwrap();
     let p = ObsPlugin::for_test(endpoint).unwrap();
+    let shared = p.shared.clone();
     let run = std::thread::spawn(move || rad_plugin_sdk::run(config(), p, input, peer));
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -222,6 +224,10 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
         json!({"kind":"invoke","credential_revision":1,"action":"record","parameters":{"schema_version":1,"values":{"operation":"start"}}}),
     );
     assert_eq!(recv(&mut host)["message"]["outcome"]["status"], "failure");
+    assert!(
+        lock(&shared.inner).sessions.is_empty(),
+        "failed action retained a session"
+    );
     send(
         &mut host,
         4,
@@ -276,7 +282,7 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -343,7 +349,7 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "ready");
         send(
@@ -358,6 +364,7 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
             json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":2}}}),
         );
         assert_eq!(recv(&mut host)["message"]["outcome"]["status"], "success");
+        assert_server_finished(&server);
         send(
             &mut host,
             4,
@@ -423,7 +430,7 @@ fn event_during_snapshot_drains_old_reply_before_resync_and_never_publishes_it()
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -501,7 +508,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
         );
         recv(&mut host);
         send(
@@ -651,7 +658,7 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -688,7 +695,7 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
         worker_turn(&shared, deadline - Duration::from_nanos(1));
         assert_eq!(lock(&shared.inner).sessions[&1].waits.len(), 1);
         worker_turn(&shared, deadline);
-        assert!(lock(&shared.inner).sessions[&1].waits.is_empty());
+        assert!(lock(&shared.inner).sessions.is_empty());
         let answer = recv(&mut host);
         assert_eq!(answer["message"]["outcome"]["code"], "timed_out");
     }
@@ -758,7 +765,7 @@ fn revision_churn_child() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":0}}),
+        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
     );
     recv(&mut host);
     std::thread::sleep(Duration::from_millis(20));
@@ -779,11 +786,7 @@ fn revision_churn_child() {
         );
         let deadline = Instant::now() + Duration::from_secs(3);
         loop {
-            let inner = lock(&shared.inner);
-            let present = inner.sessions.contains_key(&revision);
-            let complete = present && inner.sessions[&revision].waits.is_empty();
-            drop(inner);
-            if complete {
+            if closed.load(Ordering::SeqCst) >= revision as usize {
                 break;
             }
             assert!(Instant::now() < deadline);
@@ -851,4 +854,107 @@ fn failed_attempt_backoff_grows_to_two_seconds_with_controlled_clock() {
         assert_eq!(s.retry.duration_since(now), Duration::from_millis(millis));
         now += Duration::from_secs(3);
     }
+}
+
+#[test]
+fn shared_transport_survives_one_consumer_and_closes_after_the_last() {
+    let (mut host, run, server) = scripted(vec![
+        (
+            "GetRecordStatus",
+            json!({"outputActive":true,"outputPaused":false}),
+        ),
+        (
+            "GetRecordStatus",
+            json!({"outputActive":true,"outputPaused":false}),
+        ),
+    ]);
+    for request in [3, 4] {
+        send(
+            &mut host,
+            request,
+            json!({"kind":"subscribe","credential_revision":1,"source":"record","parameters":{"schema_version":1,"values":{}}}),
+        );
+        loop {
+            let reply = recv(&mut host);
+            if reply["correlation"]["request"] == request
+                && reply["message"]["state"]["availability"] == "current"
+            {
+                break;
+            }
+        }
+    }
+    send(
+        &mut host,
+        5,
+        json!({"kind":"unsubscribe","subscription":{"generation":1,"request":3}}),
+    );
+    // Acknowledged later input establishes that unsubscribe has been handled.
+    send(
+        &mut host,
+        6,
+        json!({"kind":"credentials","revision":2,"values":[]}),
+    );
+    while recv(&mut host)["message"]["kind"] != "credentials_applied" {}
+    assert!(
+        !server.is_finished(),
+        "remaining consumer lost its shared transport"
+    );
+    // A Wait shares the surviving authenticated connection; a second connection would not
+    // be served by this fixture and could not answer successfully.
+    send(
+        &mut host,
+        7,
+        json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":1}}}),
+    );
+    loop {
+        let reply = recv(&mut host);
+        if reply["correlation"]["request"] == 7 {
+            assert_eq!(reply["message"]["outcome"]["status"], "success");
+            break;
+        }
+    }
+    send(
+        &mut host,
+        8,
+        json!({"kind":"unsubscribe","subscription":{"generation":1,"request":4}}),
+    );
+    let deadline = Instant::now() + Duration::from_secs(1);
+    while !server.is_finished() && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let released = server.is_finished();
+    drop(host);
+    assert!(run.join().unwrap().is_ok());
+    server.join().unwrap();
+    assert!(
+        released,
+        "last consumer left its OBS socket open without demand"
+    );
+}
+
+fn assert_server_finished(server: &std::thread::JoinHandle<()>) {
+    let deadline = Instant::now() + Duration::from_secs(1);
+    while !server.is_finished() && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert!(
+        server.is_finished(),
+        "last operation left its OBS transport alive"
+    );
+}
+
+#[test]
+fn construction_without_consumers_opens_no_obs_connection() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let std::net::SocketAddr::V4(endpoint) = listener.local_addr().unwrap() else {
+        unreachable!()
+    };
+    let plugin = ObsPlugin::for_test(endpoint).unwrap();
+    std::thread::sleep(Duration::from_millis(100));
+    assert!(lock(&plugin.shared.inner).sessions.is_empty());
+    assert_eq!(
+        listener.accept().unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock
+    );
 }

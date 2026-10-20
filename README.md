@@ -12,14 +12,18 @@ workspace: it does not depend on any RAD crate, it implements the documented plu
 | [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; metrics-v0.1.0 published. |
 | [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
 
-The metrics plugin is published as
-[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0)
-after integrated review and exact-artifact real tests. RADP SHA256:
-`20f8ba214c18b3bd29d62c53c968536e9803234286c593b7f4108b2355cfc5b1`.
-A separate private installation check passed HTTPS curl download and offline
-Manager/runtime/IPC uninstall/reinstall; it did not test the integrated Downloader
-or GUI installation. Fixtures are not release artifacts. This does not
-license/publish RAD or close F5; human validation remains pending.
+The previous metrics release is
+[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0).
+Its acceptance notes describe that historical release, not the validation or
+publication of newer source changes. Fixtures are not release artifacts.
+
+The source versions prepared here are media **0.1.1**, OBS **0.1.1** and metrics
+**0.1.1**; audio and the SDK remain **0.1.0**. These updates acquire external
+resources on demand and release them after their last consumer. Process sleep
+also requires a RAD host implementing the demand-driven lifecycle contract below;
+plugin updates alone do not add host sleep. Manifest contract 1, envelope protocol 1,
+and the existing host API ranges (audio/media/metrics: 2; OBS: 3), definition IDs
+and configuration schemas are unchanged. Preparation does not establish publication.
 
 ## Build, test, package
 
@@ -29,7 +33,12 @@ cargo test --locked --release --workspace --all-features
 cargo clippy --locked --release --workspace --all-features --all-targets -- -D warnings
 ```
 
-`cargo test` runs without touching real audio: the tests drive a fake `pactl`. The media plugin's
+Audio unit and protocol tests drive a fake `pactl`. The production no-server test
+runs the real `pactl` inside a `bwrap` sandbox with private HOME, runtime, temporary,
+device, network and PID namespaces and read-only system executables/libraries.
+It cannot reach the host audio server. The isolation guard fails closed if the
+required sandbox cannot run. `bwrap`, `pactl` and Linux namespace support must be
+available beforehand; the tests do not install dependencies. The media plugin's
 tests run against a private `dbus-daemon` (it must be installed) with fake MPRIS players, never the
 session bus. OBS tests use synthetic credentials and fake loopback servers on ephemeral ports,
 never an installed OBS instance or its default port. Metrics tests use controlled proc
@@ -52,6 +61,31 @@ format version, the manifest and executable lengths, then the two blobs. The man
 1 to 65536 bytes and the executable 1 byte to 64 MiB; anything else is refused before it is read.
 
 ## Writing a plugin with the SDK
+
+### Demand-driven resources
+
+The host lifecycle contract defaults manifest `lifecycle` to `on_demand`;
+developers may explicitly select `always_loaded` for a constant-process need.
+This is host metadata, not a `Config` switch or a new protocol message.
+Construct on-demand plugins inertly. Acquire only resources needed by
+`invoke`, `options` or `subscribe`, share them among compatible consumers, and
+release them when the last consumer finishes (`unsubscribe` ends a visual
+consumer). A visible action may keep the process alive without prewarming its
+resources. Reloads must refresh current state without replaying actions.
+`always_loaded` may retain a required connection, not indiscriminately activate
+every reader or source.
+
+The SDK does not optimize arbitrary plugin internals: resource ownership and
+cleanup are the author's responsibility. The host retains demand for admitted
+executions (including future steps), outstanding queries and residual work;
+a reply deadline does not prove that work ended. Preserve credential-revision
+isolation while sharing resources. Ordinary sleep/wake does not replay actions,
+and a failed process is not transparently retried.
+
+Older plugins that eagerly acquire resources need adaptation even when their
+manifest omits `lifecycle`. Compatibility with older hosts that do not understand
+this metadata is not promised. These source requirements do not claim that
+installed release artifacts have been upgraded or that validation is complete.
 
 Implement `rad_plugin_sdk::Plugin` and hand it to `run_stdio`:
 

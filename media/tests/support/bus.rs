@@ -184,6 +184,35 @@ impl PrivateBus {
         );
     }
 
+    /// Connected clients, excluding this short-lived observer and the daemon.
+    pub fn client_count(&self) -> usize {
+        let connection = gio::DBusConnection::for_address_sync(
+            self.address(),
+            gio::DBusConnectionFlags::AUTHENTICATION_CLIENT
+                | gio::DBusConnectionFlags::MESSAGE_BUS_CONNECTION,
+            None,
+            None::<&gio::Cancellable>,
+        )
+        .unwrap();
+        let reply = connection
+            .call_sync(
+                Some("org.freedesktop.DBus"),
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "ListNames",
+                None,
+                None,
+                gio::DBusCallFlags::NONE,
+                1000,
+                None::<&gio::Cancellable>,
+            )
+            .unwrap();
+        let (names,) = reply.get::<(Vec<String>,)>().unwrap();
+        let count = names.iter().filter(|name| name.starts_with(':')).count() - 1;
+        connection.close_sync(None::<&gio::Cancellable>).unwrap();
+        count
+    }
+
     pub fn address(&self) -> &str {
         &self.address
     }

@@ -33,6 +33,8 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 struct Buttons {
     subscriptions: Vec<Subscription>,
     shown: Option<VisualState>,
+    /// Identifies one continuous interval of demand; residual reads belong to their old interval.
+    interval: Arc<()>,
 }
 
 /// An application the plugin has to do with: it has buttons, or a reader that has not left yet.
@@ -79,8 +81,11 @@ impl Job {
 }
 
 /// Shows `state` on every button of the group, unless it is already what they show.
-fn publish(buttons: &Mutex<Buttons>, state: VisualState) {
+fn publish(buttons: &Mutex<Buttons>, interval: &Arc<()>, state: VisualState) {
     let mut buttons = locked(buttons);
+    if !Arc::ptr_eq(&buttons.interval, interval) {
+        return;
+    }
     if buttons.shown.as_ref() != Some(&state) {
         for subscription in &buttons.subscriptions {
             subscription.update(state.clone());
@@ -99,9 +104,12 @@ fn serve(watch: &Weak<Watch>, bus: &Bus, timing: &Timing, mut job: Job) {
             timing.recheck,
             timing.linger,
         ) {
-            let shown = locked(&job.buttons).shown.clone();
+            let (shown, interval) = {
+                let buttons = locked(&job.buttons);
+                (buttons.shown.clone(), Arc::clone(&buttons.interval))
+            };
             let state = job.reader.read(bus, timing, shown.as_ref());
-            publish(&job.buttons, state);
+            publish(&job.buttons, &interval, state);
         }
         match watch.upgrade().and_then(|watch| watch.next_job(job)) {
             Some(next) => job = next,
@@ -276,6 +284,12 @@ impl Watch {
         group.wake.resume();
         {
             let mut buttons = locked(&group.buttons);
+            if buttons.subscriptions.is_empty() {
+                // A retained reader is only residual capacity, not evidence of current state.
+                buttons.shown = None;
+                buttons.interval = Arc::new(());
+                group.wake.now();
+            }
             // A button joining a group that already shows something shows it straight away.
             if let Some(shown) = &buttons.shown {
                 subscription.update(shown.clone());

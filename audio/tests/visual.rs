@@ -145,6 +145,11 @@ fn a_server_that_goes_away_is_unavailable_and_recovery_restores_the_state() {
 fn the_monitor_exists_only_while_something_is_subscribed() {
     let server = FakeServer::new();
     let mut host = Host::start(&server, quick());
+    std::thread::sleep(Duration::from_millis(150));
+    assert!(
+        server.calls().is_empty(),
+        "constructing an idle plugin runs no pactl"
+    );
     assert_eq!(
         host.options("action", "output", "device")["availability"],
         "available"

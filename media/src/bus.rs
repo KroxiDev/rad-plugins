@@ -12,7 +12,7 @@ use rad_plugin_sdk::FailureCode;
 use std::{
     cell::RefCell,
     rc::Rc,
-    sync::{Condvar, Mutex, MutexGuard, PoisonError},
+    sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError, Weak},
     time::{Duration, Instant},
 };
 
@@ -70,8 +70,27 @@ pub(crate) struct Method<'a> {
 /// The shared connection, and whether somebody is making it right now.
 #[derive(Default)]
 struct Link {
-    open: Option<DBusConnection>,
+    open: Weak<Connection>,
     connecting: bool,
+}
+
+/// Owned by effective callers, never by the idle plugin. Each operation keeps a lease across
+/// its calls; the last operation closes it, without interrupting another caller.
+pub(crate) struct Connection(DBusConnection);
+
+impl std::ops::Deref for Connection {
+    type Target = DBusConnection;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Drop for Connection {
+    fn drop(&mut self) {
+        // This closes the local transport, not a method call awaiting the bus or player.
+        let _ = self.0.close_sync(None::<&Cancellable>);
+    }
 }
 
 /// The session bus the plugin was started with. It connects when first needed and again after the
@@ -130,11 +149,11 @@ impl Bus {
 
     /// The connection calls are made over: shared, and made again once it was lost. Whoever finds
     /// it missing makes it; the others wait for that, but no longer than their own `deadline`.
-    pub(crate) fn connection(&self, deadline: Instant) -> Result<DBusConnection, Failure> {
+    pub(crate) fn connection(&self, deadline: Instant) -> Result<Arc<Connection>, Failure> {
         let mut link = self.locked();
         loop {
-            if let Some(open) = link.open.as_ref().filter(|c| !c.is_closed()) {
-                return Ok(open.clone());
+            if let Some(open) = link.open.upgrade().filter(|c| !c.is_closed()) {
+                return Ok(open);
             }
             if !link.connecting {
                 break;
@@ -152,8 +171,8 @@ impl Bus {
         link.connecting = true;
         drop(link);
         let _attempt = Attempt(self);
-        let connection = self.connect(&MainContext::new(), deadline)?;
-        self.locked().open = Some(connection.clone());
+        let connection = Arc::new(Connection(self.connect(&MainContext::new(), deadline)?));
+        self.locked().open = Arc::downgrade(&connection);
         Ok(connection)
     }
 

@@ -29,6 +29,9 @@ fn clean_label(text: &str) -> Option<String> {
 /// The applications that are running, then the expected ones that are not, at most
 /// [`MAX_CHOICES`] in all. `Unavailable` if the bus cannot be asked.
 pub(crate) fn player_options(bus: &Bus, timing: &Timing, deadline: Instant) -> ChoiceList {
+    let Ok(_connection) = bus.connection(deadline) else {
+        return ChoiceList::Unavailable;
+    };
     let names = match bus.player_names(deadline) {
         Ok(names) => names,
         Err(_) => return ChoiceList::Unavailable,

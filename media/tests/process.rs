@@ -62,7 +62,7 @@ impl Process {
         self.send(
             1,
             json!({"kind":"hello","host_api":api,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":0}}),
+                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":1}}),
         );
     }
 
@@ -256,7 +256,7 @@ fn the_real_binary_handshakes_lists_options_acts_and_shows_a_visual() {
     assert_eq!(ready["correlation"], json!({"generation":3,"request":1}));
     assert_eq!(
         ready["message"],
-        json!({"kind":"ready","plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":0}})
+        json!({"kind":"ready","plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":1}})
     );
 
     plugin.send(
@@ -642,5 +642,42 @@ fn cover_conversion_is_shared_and_retires_before_starting_again() {
         unsubscribe(&mut plugin, first + 2, first);
         unsubscribe(&mut plugin, first + 3, first + 1);
         wait_until_idle(&plugin, Duration::from_secs(5));
+    }
+}
+
+#[test]
+fn sigkill_releases_monitor_reader_and_converter_without_sdk_teardown() {
+    let bus = PrivateBus::start();
+    let runtime = scratch_dir("kill-cover-worker", false);
+    let path = runtime.join("cover.png");
+    image::RgbaImage::from_pixel(256, 256, image::Rgba([30, 120, 220, 255]))
+        .save(&path)
+        .unwrap();
+    let mut player = FakePlayer::start(&bus, BRAVE);
+    player
+        .command(&format!("art file://{}", path.display()))
+        .sync();
+    let mut plugin = real_plugin(&bus, &runtime);
+    plugin.hello(2);
+    plugin.recv().expect("ready");
+    subscribe(&mut plugin, 2, "brave");
+    let frame = plugin
+        .recv_for_within(2, Duration::from_secs(5))
+        .expect("cover");
+    assert!(frame["message"]["state"]["content"]["jpeg_hex"].is_string());
+    let threads = threads_of(plugin.child.id());
+    assert!(threads.iter().any(|(_, name)| name == "media-cover"));
+    assert!(threads.iter().any(|(_, name)| name == "media-monitor"));
+    assert!(threads.iter().any(|(_, name)| name == "media-reader"));
+    // The host's normal stop is SIGKILL, not graceful EOF; no Rust destructor is assumed.
+    plugin.child.kill().unwrap();
+    let status = plugin.child.wait().unwrap();
+    use std::os::unix::process::ExitStatusExt;
+    assert_eq!(status.signal(), Some(libc::SIGKILL));
+    assert!(threads_of(plugin.child.id()).is_empty());
+    let end = Instant::now() + Duration::from_secs(3);
+    while bus.client_count() != 1 {
+        assert!(Instant::now() < end, "killed plugin retained bus resources");
+        std::thread::sleep(Duration::from_millis(10));
     }
 }

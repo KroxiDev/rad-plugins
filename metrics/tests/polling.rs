@@ -161,11 +161,62 @@ fn late_completion_is_discarded_and_reader_is_not_replaced() {
         VisualState::Unavailable
     ));
     release_tx.send(()).unwrap();
-    for t in 1501..10000 {
+    poller.tick(ms(1501), false);
+    poller.tick(ms(1502), true);
+    for t in 1503..10000 {
         assert!(matches!(
             poller.tick(ms(t), true)[0],
             VisualState::Unavailable
         ));
     }
     assert_eq!(count.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn last_release_and_resubscribe_never_reuse_current_sample() {
+    let mut poller = Poller::new(|| Sample {
+        cpu: Some(25),
+        ..Default::default()
+    })
+    .unwrap();
+    poller.tick(ms(0), true);
+    let deadline = std::time::Instant::now() + Duration::from_secs(1);
+    while !current(&poller.tick(ms(1), true)[0]) {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    assert!(!current(&poller.tick(ms(2), false)[0]));
+    assert!(!current(&poller.tick(ms(3), true)[0]));
+}
+
+#[test]
+fn in_flight_sample_from_previous_subscription_epoch_is_discarded() {
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let mut poller = Poller::new(move || {
+        entered_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+        Sample {
+            cpu: Some(37),
+            ..Default::default()
+        }
+    })
+    .unwrap();
+    poller.tick(ms(0), true);
+    entered_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+    poller.tick(ms(1), false);
+    poller.tick(ms(2), true);
+    release_tx.send(()).unwrap();
+    let deadline = std::time::Instant::now() + Duration::from_secs(1);
+    loop {
+        let states = poller.tick(ms(1000), true);
+        assert!(!current(&states[0]), "old in-flight epoch became Current");
+        if entered_rx.try_recv().is_ok() {
+            break;
+        }
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    drop(poller);
+    release_tx.send(()).unwrap();
 }

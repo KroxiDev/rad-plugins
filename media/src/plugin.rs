@@ -13,7 +13,7 @@ pub fn config() -> Config {
         Version {
             major: 0,
             minor: 1,
-            patch: 0,
+            patch: 1,
         },
         2..=2,
     )

@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "rad-plugin-media"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gio",
  "glib",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "rad-plugin-metrics"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "libc",
  "rad-plugin-sdk",
@@ -574,7 +574,7 @@ dependencies = [
 
 [[package]]
 name = "rad-plugin-obs"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64",
  "libc",

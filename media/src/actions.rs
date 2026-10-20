@@ -78,6 +78,7 @@ pub(crate) fn perform(bus: &Bus, call: &Invoke, deadline: Instant) -> Outcome {
 /// Asks the player of the application `app` to do `operation`. The player is the chosen
 /// application's first instance on the bus, and no other: if there is none, nothing is sent.
 fn control(bus: &Bus, operation: Operation, app: &str, deadline: Instant) -> Result<(), Failure> {
+    let _connection = bus.connection(deadline)?;
     let names = bus.player_names(deadline)?;
     let name = first_instance(names.iter().map(String::as_str), app).ok_or(Failure::Unavailable)?;
     if !player::can(bus, name, operation.ability(), deadline)? {

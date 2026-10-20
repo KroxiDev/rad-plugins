@@ -15,7 +15,7 @@ pub fn config() -> Config {
         Version {
             major: 0,
             minor: 1,
-            patch: 0,
+            patch: 1,
         },
         3..=3,
     )
@@ -331,6 +331,7 @@ impl Plugin for ObsPlugin {
             }
             session.watches.retain(|w| w.sub.id() != id);
         }
+        inner.sessions.retain(|_, session| session.has_demand());
     }
     fn credentials_released(&self, revision: u64) {
         lock(&self.shared.inner).sessions.remove(&revision);
@@ -342,7 +343,14 @@ fn run_worker(shared: Arc<Shared>) {
         if inner.stop {
             continue;
         }
-        let _ = shared.wake.wait_timeout(inner, Duration::from_millis(20));
+        if inner.sessions.is_empty() {
+            // No sockets or deadlines remain: only new demand (or shutdown) can wake us.
+            let _guard = shared
+                .wake
+                .wait_while(inner, |inner| !inner.stop && inner.sessions.is_empty());
+        } else {
+            let _ = shared.wake.wait_timeout(inner, Duration::from_millis(20));
+        }
     }
 }
 // Same turn for production monotonic time and isolated deadline tests.
@@ -418,6 +426,9 @@ fn worker_turn(shared: &Shared, now: Instant) -> bool {
             }
         }
     }
+    // Retire the transport before answering the final consumer, not only when credentials
+    // are replaced. A later consumer starts a fresh session with no old actions or state.
+    inner.sessions.retain(|_, session| session.has_demand());
     drop(inner);
     for (reply, outcome) in replies {
         reply.send(outcome);
@@ -429,6 +440,9 @@ fn worker_turn(shared: &Shared, now: Instant) -> bool {
 }
 
 impl Session {
+    fn has_demand(&self) -> bool {
+        !self.waits.is_empty() || !self.queries.is_empty() || !self.watches.is_empty()
+    }
     fn event(&mut self, event: &str, now: Instant) {
         if event == "CurrentSceneCollectionChanging" {
             self.blocked = true;
