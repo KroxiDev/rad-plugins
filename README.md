@@ -9,7 +9,7 @@ workspace: it does not depend on any RAD crate, it implements the documented plu
 | [`sdk`](sdk) | `rad-plugin-sdk` | Framing, protocol types, the handshake and dispatch loop with deferred replies and visual heartbeats, and the `radp-pack` packer. |
 | [`audio`](audio) | `rad-plugin-audio` | Mute, unmute and toggle the microphone and the audio output through `pactl`. |
 | [`media`](media) | `rad-plugin-media` | Control a media player (play, pause, stop, previous, next) and show its cover through MPRIS on the session D-Bus. |
-| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; metrics-v0.1.0 published. |
+| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; metrics-v0.1.1 published. |
 | [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
 
 The previous metrics release is
@@ -17,13 +17,18 @@ The previous metrics release is
 Its acceptance notes describe that historical release, not the validation or
 publication of newer source changes. Fixtures are not release artifacts.
 
-The source versions prepared here are media **0.1.1**, OBS **0.1.1** and metrics
-**0.1.1**; audio and the SDK remain **0.1.0**. These updates acquire external
+Published updates (2026-10-20): [media 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/media-v0.1.1),
+[OBS 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/obs-v0.1.1) and
+[metrics 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.1).
+[Audio 0.1.0](https://github.com/KroxiDev/rad-plugins/releases/tag/audio-v0.1.0)
+remains the existing production release, whose resource acquisition was already
+deferred; the SDK remains **0.1.0**. These updates acquire external
 resources on demand and release them after their last consumer. Process sleep
 also requires a RAD host implementing the demand-driven lifecycle contract below;
 plugin updates alone do not add host sleep. Manifest contract 1, envelope protocol 1,
 and the existing host API ranges (audio/media/metrics: 2; OBS: 3), definition IDs
-and configuration schemas are unchanged. Preparation does not establish publication.
+and configuration schemas are unchanged. Release publication does not update an
+existing installation automatically or establish new hardware measurements.
 
 ## Build, test, package
 
