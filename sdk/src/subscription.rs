@@ -1,10 +1,8 @@
-//! Visual subscriptions, the table that tracks them and the heartbeat that keeps them fresh.
+//! Source-observed visual subscriptions with content-free renewal.
 use crate::{Correlation, Message, Parameters, VisualState, writer::Writer};
 use std::{
     collections::HashMap,
-    sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError},
-    thread::JoinHandle,
-    time::Duration,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
 };
 
 /// Identifies a subscription: the correlation of the `subscribe` that created it.
@@ -22,13 +20,14 @@ struct Inner {
     id: SubscriptionId,
     source: String,
     parameters: Parameters,
+    settings: Option<Parameters>,
     credentials: Option<crate::Credentials>,
     writer: Writer,
     state: Mutex<State>,
 }
 
 /// A live visual subscription. Clones share it, so it can be kept by the plugin and updated from
-/// any thread. The SDK repeats the last state every heartbeat until the host unsubscribes.
+/// any observing source thread. No independent task renews cached data.
 #[derive(Clone)]
 pub struct Subscription(Arc<Inner>);
 
@@ -38,12 +37,14 @@ impl Subscription {
         id: SubscriptionId,
         source: String,
         parameters: Parameters,
+        settings: Option<Parameters>,
         credentials: Option<crate::Credentials>,
     ) -> Self {
         Self(Arc::new(Inner {
             id,
             source,
             parameters,
+            settings,
             credentials,
             writer,
             state: Mutex::new(State {
@@ -75,37 +76,38 @@ impl Subscription {
         locked(&self.0.state).active
     }
 
-    /// Publishes `state` now and makes it the one the heartbeat repeats. A state the host would
-    /// reject is published as `unavailable` instead. Does nothing once the subscription ended.
-    pub fn update(&self, state: VisualState) {
+    pub fn settings(&self) -> Option<&Parameters> {
+        self.0.settings.as_ref()
+    }
+
+    /// Publish from the observing source loop, never from a separate heartbeat.
+    /// Equal state renews validity without retransmitting content or image.
+    pub fn publish(&self, state: VisualState, valid_for_ms: u64) {
         let state = if state.is_valid() {
             state
         } else {
             VisualState::Unavailable
         };
+        let valid_for_ms = valid_for_ms.clamp(1000, 60000);
         let mut inner = locked(&self.0.state);
-        if inner.active {
-            self.write(&state);
+        if !inner.active {
+            return;
+        }
+        let message = if inner.last.as_ref() == Some(&state) {
+            Message::VisualRenew { valid_for_ms }
+        } else {
+            Message::Visual {
+                state: state.clone(),
+                valid_for_ms,
+            }
+        };
+        if self.0.writer.send(self.0.id, message).is_ok() {
             inner.last = Some(state);
         }
     }
-
-    fn repeat(&self) {
-        let inner = locked(&self.0.state);
-        if let (true, Some(last)) = (inner.active, &inner.last) {
-            self.write(last);
-        }
-    }
-
-    // The state lock is held by the caller, which keeps a repeat from overtaking a newer update.
-    fn write(&self, state: &VisualState) {
-        // A failed write means the host is gone; the dispatch loop sees the same and stops.
-        let _ = self.0.writer.send(
-            self.0.id,
-            Message::Visual {
-                state: state.clone(),
-            },
-        );
+    /// Default 25-second validity. Calling this asserts a new observation of the source.
+    pub fn update(&self, state: VisualState) {
+        self.publish(state, 25000);
     }
 
     pub(crate) fn deactivate(&self) {
@@ -158,60 +160,5 @@ impl Registry {
             .collect();
         all.iter().for_each(Subscription::deactivate);
         all
-    }
-
-    fn repeat_all(&self) {
-        // Removal waits for the heartbeat, so it never retains a credential handle
-        // after unsubscribe completed.
-        for subscription in locked(&self.subscriptions).values() {
-            subscription.repeat();
-        }
-    }
-}
-
-/// Repeats the last state of every subscription each `interval`, stopping when dropped.
-pub(crate) struct Heartbeat {
-    stop: Arc<(Mutex<bool>, Condvar)>,
-    thread: Option<JoinHandle<()>>,
-}
-impl Heartbeat {
-    pub(crate) fn start(registry: Arc<Registry>, interval: Duration) -> Self {
-        let stop = Arc::new((Mutex::new(false), Condvar::new()));
-        let signal = Arc::clone(&stop);
-        let thread = std::thread::spawn(move || {
-            let (flag, wake) = &*signal;
-            loop {
-                let mut stopped = locked(flag);
-                let deadline = std::time::Instant::now() + interval;
-                while !*stopped {
-                    let left = deadline.saturating_duration_since(std::time::Instant::now());
-                    if left.is_zero() {
-                        break;
-                    }
-                    stopped = wake
-                        .wait_timeout(stopped, left)
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .0;
-                }
-                if *stopped {
-                    return;
-                }
-                drop(stopped);
-                registry.repeat_all();
-            }
-        });
-        Self {
-            stop,
-            thread: Some(thread),
-        }
-    }
-}
-impl Drop for Heartbeat {
-    fn drop(&mut self) {
-        *locked(&self.stop.0) = true;
-        self.stop.1.notify_all();
-        if let Some(thread) = self.thread.take() {
-            let _ = thread.join();
-        }
     }
 }

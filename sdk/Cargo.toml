@@ -1,12 +1,14 @@
 [package]
 name = "rad-plugin-sdk"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 publish = false
 license = { workspace = true }
 description = "Minimal SDK for writing RAD Action Deck plugins: framing, protocol types, a dispatch loop and a RADP packer."
 
 [dependencies]
+libc = { workspace = true }
+rad-plugin-contract = { path = "../crates/rad-plugin-contract" }
 zeroize = "=1.9.1"
 serde = { workspace = true }
 serde_json = { workspace = true }

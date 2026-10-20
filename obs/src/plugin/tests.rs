@@ -88,7 +88,7 @@ fn scripted(
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -209,7 +209,7 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -282,7 +282,7 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -349,7 +349,7 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "ready");
         send(
@@ -430,7 +430,7 @@ fn event_during_snapshot_drains_old_reply_before_resync_and_never_publishes_it()
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -508,7 +508,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
         );
         recv(&mut host);
         send(
@@ -658,7 +658,7 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -680,7 +680,11 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
         );
         let deadline = loop {
             let inner = lock(&shared.inner);
-            if let Some(w) = inner.sessions.get(&1).and_then(|s| s.waits.first()) {
+            if let Some(w) = inner
+                .sessions
+                .get(&(1, endpoint))
+                .and_then(|s| s.waits.first())
+            {
                 break w.deadline;
             }
             drop(inner);
@@ -693,7 +697,7 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
                 < Duration::from_secs(seconds) + Duration::from_millis(100)
         );
         worker_turn(&shared, deadline - Duration::from_nanos(1));
-        assert_eq!(lock(&shared.inner).sessions[&1].waits.len(), 1);
+        assert_eq!(lock(&shared.inner).sessions[&(1, endpoint)].waits.len(), 1);
         worker_turn(&shared, deadline);
         assert!(lock(&shared.inner).sessions.is_empty());
         let answer = recv(&mut host);
@@ -765,7 +769,7 @@ fn revision_churn_child() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     recv(&mut host);
     std::thread::sleep(Duration::from_millis(20));
@@ -957,4 +961,145 @@ fn construction_without_consumers_opens_no_obs_connection() {
         listener.accept().unwrap_err().kind(),
         std::io::ErrorKind::WouldBlock
     );
+}
+
+#[test]
+fn manifest_declares_optional_bounded_port_settings() {
+    let manifest: Value = serde_json::from_str(include_str!("../../manifest.json")).unwrap();
+    assert!(
+        manifest["capabilities"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("settings"))
+    );
+    assert_eq!(
+        manifest["settings"],
+        json!({"version":1,"fields":[{"id":"port","label":"WebSocket port","required":false,"kind":{"type":"integer","min":1,"max":65535}}]})
+    );
+}
+
+#[test]
+fn settings_port_separates_live_sessions_with_the_same_credentials() {
+    let first = TcpListener::bind("127.0.0.1:0").unwrap();
+    let second = TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = match first.local_addr().unwrap() {
+        std::net::SocketAddr::V4(v) => v,
+        _ => unreachable!(),
+    };
+    let other = second.local_addr().unwrap().port();
+    let shared = Arc::new(Shared {
+        inner: Mutex::new(Inner {
+            sessions: BTreeMap::new(),
+            stop: false,
+        }),
+        wake: Condvar::new(),
+        endpoint,
+    });
+    let plugin = ObsPlugin {
+        shared: shared.clone(),
+        thread: None,
+    };
+    let (mut host, peer) = UnixStream::pair().unwrap();
+    host.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+    let input = peer.try_clone().unwrap();
+    let run = std::thread::spawn(move || rad_plugin_sdk::run(config(), plugin, input, peer));
+    send(
+        &mut host,
+        1,
+        json!({"kind":"hello","capabilities":["credentials","settings"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+    );
+    recv(&mut host);
+    send(
+        &mut host,
+        2,
+        json!({"kind":"credentials","revision":1,"values":[]}),
+    );
+    recv(&mut host);
+    for (i, port) in [(3, endpoint.port()), (4, other)] {
+        send(
+            &mut host,
+            i,
+            json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{}},"settings":{"schema_version":1,"values":{"port":port}}}),
+        );
+    }
+    let until = Instant::now() + Duration::from_secs(2);
+    loop {
+        let inner = lock(&shared.inner);
+        if inner
+            .sessions
+            .values()
+            .map(|s| s.waits.len())
+            .sum::<usize>()
+            == 2
+        {
+            break;
+        }
+        drop(inner);
+        assert!(Instant::now() < until, "SDK did not admit both calls");
+        std::thread::yield_now();
+    }
+    let count = lock(&shared.inner).sessions.len();
+    worker_turn(&shared, Instant::now());
+    first.set_nonblocking(true).unwrap();
+    second.set_nonblocking(true).unwrap();
+    assert!(
+        first.accept().is_ok(),
+        "old operation keeps its original endpoint"
+    );
+    assert!(
+        second.accept().is_ok(),
+        "new operation connects to the selected endpoint"
+    );
+    drop(host);
+    assert!(run.join().unwrap().is_ok());
+    assert_eq!(
+        count, 2,
+        "changing port must not move old work into the new session"
+    );
+}
+
+#[test]
+fn settings_port_is_bounded_loopback_and_test_mode_never_reaches_personal_obs() {
+    let shared = Shared {
+        inner: Mutex::new(Inner {
+            sessions: BTreeMap::new(),
+            stop: false,
+        }),
+        wake: Condvar::new(),
+        endpoint: SocketAddrV4::new(Ipv4Addr::LOCALHOST, 4455),
+    };
+    assert_eq!(shared.endpoint_for(None).unwrap().port(), 4455);
+    for port in [1, 65535] {
+        let parameters =
+            serde_json::from_value(json!({"schema_version":1,"values":{"port":port}})).unwrap();
+        let endpoint = shared.endpoint_for(Some(&parameters)).unwrap();
+        assert_eq!(*endpoint.ip(), Ipv4Addr::LOCALHOST);
+        assert_eq!(endpoint.port(), port);
+    }
+    for value in [
+        json!(0),
+        json!(65536),
+        json!(-1),
+        json!(1.5),
+        json!("4455"),
+        Value::Null,
+    ] {
+        let parameters =
+            serde_json::from_value(json!({"schema_version":1,"values":{"port":value}})).unwrap();
+        assert_eq!(
+            shared.endpoint_for(Some(&parameters)),
+            Err(FailureCode::InvalidParameters)
+        );
+    }
+    let test = Shared {
+        endpoint: SocketAddrV4::new(Ipv4Addr::LOCALHOST, 12345),
+        ..shared
+    };
+    let parameters =
+        serde_json::from_value(json!({"schema_version":1,"values":{"port":4455}})).unwrap();
+    assert_eq!(
+        test.endpoint_for(Some(&parameters)),
+        Err(FailureCode::InvalidParameters)
+    );
+    assert_eq!(test.endpoint_for(None).unwrap().port(), 12345);
 }

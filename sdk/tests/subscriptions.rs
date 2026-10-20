@@ -1,8 +1,8 @@
-//! Visual subscriptions: handles, validation, the heartbeat and the subscription cap.
+//! Visual subscriptions: handles, validation, source renewal and the subscription cap.
 mod support;
 use rad_plugin_sdk::{
-    ChoiceList, Config, Error, Invoke, OptionsQuery, Outcome, Plugin, Reply, Subscription,
-    SubscriptionId, VisualContent, VisualState,
+    ChoiceList, Error, Invoke, OptionsQuery, Outcome, Plugin, Reply, Subscription, SubscriptionId,
+    VisualContent, VisualState,
 };
 use serde_json::{Value, json};
 use std::{
@@ -74,8 +74,8 @@ fn wait() -> Duration {
 #[test]
 fn a_subscription_handle_updates_on_the_subscribe_correlation() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     let sub = probe.handles.recv_timeout(wait()).unwrap();
     assert_eq!((sub.id().generation, sub.id().request), (GENERATION, 2));
@@ -94,7 +94,7 @@ fn a_subscription_handle_updates_on_the_subscribe_correlation() {
     assert_eq!(correlation(&frame), (GENERATION, 2));
     assert_eq!(
         frame["message"],
-        json!({"kind":"visual","state":{"availability":"current",
+        json!({"kind":"visual","valid_for_ms":25000,"state":{"availability":"current",
             "content":{"text":"On","png_hex":null,"color":[0,200,0,255]}}})
     );
     sub.update(VisualState::Stale {
@@ -118,8 +118,8 @@ fn a_subscription_handle_updates_on_the_subscribe_correlation() {
 #[test]
 fn a_visual_the_host_would_reject_is_replaced_by_unavailable() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     let sub = probe.handles.recv_timeout(wait()).unwrap();
     let invalid = [
@@ -159,6 +159,8 @@ fn a_visual_the_host_would_reject_is_replaced_by_unavailable() {
         },
     ];
     for (n, content) in invalid.into_iter().enumerate() {
+        sub.update(text("valid reset"));
+        assert_eq!(shown(&host.recv()).as_deref(), Some("valid reset"));
         sub.update(VisualState::Current { content });
         assert_eq!(
             host.recv()["message"]["state"],
@@ -184,67 +186,64 @@ fn a_visual_the_host_would_reject_is_replaced_by_unavailable() {
     host.finish().unwrap();
 }
 
-/// Largest gap between consecutive frames of one subscription, in a window of about 1.3 s.
-fn largest_gap(config: Config, subscriptions: u64) -> (Duration, Vec<usize>) {
+#[test]
+fn observing_unchanged_sources_renews_each_subscription_without_repeating_content() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config, plugin);
-    host.handshake(2);
-    for request in 2..2 + subscriptions {
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
+    let mut subscriptions = Vec::new();
+    for request in 2..5 {
         subscribe(&mut host, request);
-        probe
-            .handles
-            .recv_timeout(wait())
-            .unwrap()
-            .update(text(&format!("s{request}")));
+        let sub = probe.handles.recv_timeout(wait()).unwrap();
+        sub.publish(text(&format!("s{request}")), 1000);
+        let initial = host.recv();
+        assert_eq!(correlation(&initial), (GENERATION, request));
+        assert_eq!(shown(&initial), Some(format!("s{request}")));
+        subscriptions.push(sub);
     }
-    let window = Instant::now();
-    let mut last_seen: Vec<Option<Instant>> = vec![None; subscriptions as usize];
-    let mut counts = vec![0usize; subscriptions as usize];
-    let mut gap = Duration::ZERO;
-    while window.elapsed() < Duration::from_millis(1300) {
-        let Some(frame) = host.recv_within(Duration::from_millis(100)) else {
-            continue;
-        };
-        let index = (correlation(&frame).1 - 2) as usize;
-        assert_eq!(
-            shown(&frame),
-            Some(format!("s{}", index + 2)),
-            "heartbeat repeats the last state"
-        );
-        let now = Instant::now();
-        if let Some(previous) = last_seen[index] {
-            gap = gap.max(now - previous);
+    assert!(
+        host.recv_within(Duration::from_millis(1100)).is_none(),
+        "cached states are never renewed automatically"
+    );
+    for _ in 0..3 {
+        for sub in &subscriptions {
+            sub.publish(text(&format!("s{}", sub.id().request)), 1000);
+            let renewal = host.recv();
+            assert_eq!(correlation(&renewal), (GENERATION, sub.id().request));
+            assert_eq!(
+                renewal["message"],
+                json!({"kind":"visual_renew","valid_for_ms":1000})
+            );
         }
-        last_seen[index] = Some(now);
-        counts[index] += 1;
     }
     host.finish().unwrap();
-    (gap, counts)
 }
 
 #[test]
-fn the_heartbeat_repeats_every_subscription_well_inside_the_one_second_ttl() {
-    let (gap, counts) = largest_gap(config(2..=2), 3);
-    assert!(
-        counts.iter().all(|&n| n >= 3),
-        "frames per subscription: {counts:?}"
-    );
-    // Heartbeat is 400 ms by default; allow scheduling slack on top of the 500 ms bound.
-    assert!(gap <= Duration::from_millis(600), "largest gap {gap:?}");
-}
-
-#[test]
-fn a_heartbeat_longer_than_the_ttl_is_clamped_to_500_ms() {
-    let (gap, counts) = largest_gap(config(2..=2).heartbeat(Duration::from_secs(10)), 1);
-    assert!(counts[0] >= 3, "frames: {counts:?}");
-    assert!(gap <= Duration::from_millis(600), "largest gap {gap:?}");
+fn declared_validity_is_clamped_to_the_contract_bounds() {
+    let (plugin, probe) = hub();
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
+    subscribe(&mut host, 2);
+    let sub = probe.handles.recv_timeout(wait()).unwrap();
+    for (requested, expected) in [
+        (0, 1000),
+        (999, 1000),
+        (1000, 1000),
+        (60000, 60000),
+        (60001, 60000),
+    ] {
+        sub.publish(text("observed"), requested);
+        assert_eq!(host.recv()["message"]["valid_for_ms"], expected);
+    }
+    host.finish().unwrap();
 }
 
 #[test]
 fn a_subscription_that_was_never_updated_sends_nothing() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2).heartbeat(Duration::from_millis(20)), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     let _sub = probe.handles.recv_timeout(wait()).unwrap();
     assert!(host.recv_within(Duration::from_millis(200)).is_none());
@@ -252,10 +251,10 @@ fn a_subscription_that_was_never_updated_sends_nothing() {
 }
 
 #[test]
-fn unsubscribe_stops_the_heartbeat_and_silences_the_handle() {
+fn unsubscribe_stops_renewals_and_silences_the_handle() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2).heartbeat(Duration::from_millis(20)), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     subscribe(&mut host, 3);
     let first = probe.handles.recv_timeout(wait()).unwrap();
@@ -278,25 +277,27 @@ fn unsubscribe_stops_the_heartbeat_and_silences_the_handle() {
     );
     while correlation(&host.recv()) != (GENERATION, 6) {}
     first.update(text("ignored"));
+    first.publish(text("first"), 1000);
     let deadline = Instant::now() + Duration::from_millis(300);
     let mut seen = 0;
     while Instant::now() < deadline {
+        second.publish(text("second"), 1000);
         if let Some(frame) = host.recv_within(Duration::from_millis(50)) {
             assert_eq!(
                 correlation(&frame),
                 (GENERATION, 3),
-                "only the live subscription repeats"
+                "only the live subscription renews"
             );
             seen += 1;
         }
     }
     assert!(
         seen >= 3,
-        "the live subscription kept its heartbeat ({seen})"
+        "the live subscription kept its renewals ({seen})"
     );
     // Unknown subscriptions are ignored.
     host.send(
-        5,
+        7,
         json!({"kind":"unsubscribe","subscription":{"generation":GENERATION,"request":99}}),
     );
     assert!(
@@ -311,8 +312,8 @@ fn unsubscribe_stops_the_heartbeat_and_silences_the_handle() {
 #[test]
 fn ending_the_session_unsubscribes_what_is_left() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     subscribe(&mut host, 3);
     let handles = [
@@ -329,17 +330,17 @@ fn ending_the_session_unsubscribes_what_is_left() {
 }
 
 #[test]
-fn at_most_64_subscriptions_are_tracked_and_the_extra_one_is_answered_unavailable() {
+fn at_most_32_subscriptions_are_tracked_and_the_extra_one_is_answered_unavailable() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
-    for request in 2..66 {
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
+    for request in 2..34 {
         subscribe(&mut host, request);
         probe.handles.recv_timeout(wait()).unwrap();
     }
-    subscribe(&mut host, 66);
+    subscribe(&mut host, 34);
     let refused = host.recv();
-    assert_eq!(correlation(&refused), (GENERATION, 66));
+    assert_eq!(correlation(&refused), (GENERATION, 34));
     assert_eq!(
         refused["message"]["state"],
         json!({"availability":"unavailable"})
@@ -350,11 +351,11 @@ fn at_most_64_subscriptions_are_tracked_and_the_extra_one_is_answered_unavailabl
     );
     // Freeing one makes room again.
     host.send(
-        67,
+        35,
         json!({"kind":"unsubscribe","subscription":{"generation":GENERATION,"request":2}}),
     );
     probe.unsubscribed.recv_timeout(wait()).unwrap();
-    subscribe(&mut host, 68);
+    subscribe(&mut host, 36);
     probe.handles.recv_timeout(wait()).unwrap();
     host.finish().unwrap();
 }
@@ -362,8 +363,8 @@ fn at_most_64_subscriptions_are_tracked_and_the_extra_one_is_answered_unavailabl
 #[test]
 fn reusing_a_subscription_correlation_is_a_protocol_violation() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     probe.handles.recv_timeout(wait()).unwrap();
     subscribe(&mut host, 2);
@@ -371,18 +372,18 @@ fn reusing_a_subscription_correlation_is_a_protocol_violation() {
     assert!(matches!(result, Err(Error::Protocol(_))), "{result:?}");
 }
 
-/// Updates from a worker thread race with a 2 ms heartbeat; the host must never see an older
-/// state after a newer one.
+/// Source renewals interleave with updates; the host must never see an older state.
 #[test]
-fn the_heartbeat_never_overtakes_a_newer_update() {
+fn source_renewals_never_retransmit_an_older_update() {
     let (plugin, probe) = hub();
-    let mut host = Host::start(config(2..=2).heartbeat(Duration::from_millis(2)), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     subscribe(&mut host, 2);
     let sub = probe.handles.recv_timeout(wait()).unwrap();
     let last = 300u32;
     let worker = std::thread::spawn(move || {
         for n in 0..=last {
+            sub.update(text(&n.to_string()));
             sub.update(text(&n.to_string()));
             std::thread::sleep(Duration::from_micros(300));
         }
@@ -390,6 +391,10 @@ fn the_heartbeat_never_overtakes_a_newer_update() {
     let mut highest = 0u32;
     while highest < last {
         let frame = host.recv();
+        if frame["message"]["kind"] == "visual_renew" {
+            assert!(frame["message"].get("state").is_none());
+            continue;
+        }
         let n: u32 = shown(&frame).unwrap().parse().unwrap();
         assert!(n >= highest, "state {n} arrived after {highest}");
         highest = n;

@@ -1,8 +1,14 @@
 # RAD OBS plugin
 
-Standalone official plugin `org.rad.obs` (`rad-plugin-obs`), host API 3.
-Connects only to **127.0.0.1:4455** using obs-websocket 5.x, RPC 1,
-JSON/text WebSocket. Configure that port in OBS. No remote hosts, TLS,
+Standalone official plugin `org.rad.obs` (`rad-plugin-obs`), version 0.2.0,
+plugin contract v1 with negotiated credentials, settings, choices and response-timeout capabilities.
+See the [contract and author guide](../README.md).
+Connects only to **127.0.0.1** using obs-websocket 5.x, RPC 1,
+JSON/text WebSocket. The optional plugin setting `port` is an integer from 1 to
+65535 (default **4455**); configure the same port in OBS. It travels with deck
+backups. Each operation captures its port, and changing it does not move live
+jobs or queries to another connection. Visuals are resubscribed with new settings.
+No remote hosts, TLS,
 Studio/preview control, object creation, or multiple OBS instances.
 
 Set the optional `password` credential slot to the OBS WebSocket password.

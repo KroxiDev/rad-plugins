@@ -31,8 +31,8 @@ fn quick_subscribe_unsubscribe_cycles_with_a_stuck_listing_never_pile_up_monitor
     let server = FakeServer::new();
     let timing = quick().refresh_deadline(Duration::from_millis(600));
     let mut host = Host::start(&server, timing);
-    // The baseline is taken after a real answer: the plugin's loop and the SDK's heartbeat thread
-    // exist by then, whereas right after the handshake the heartbeat may not have started yet.
+    // Take the baseline after a real answer, once the dispatch path and demanded
+    // integration resources have started (there is no independent SDK heartbeat).
     assert_eq!(
         host.options("action", "output", "device")["availability"],
         "available"

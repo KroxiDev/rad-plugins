@@ -1,25 +1,7 @@
 //! Immutable operation-scoped credentials. Keep sessions keyed by revision, not by a mutable map.
 use crate::Error;
-use serde::{Deserialize, Serialize};
+pub use rad_plugin_contract::{CredentialValue, MAX_CREDENTIAL_REVISIONS};
 use std::{collections::BTreeMap, sync::Arc};
-use zeroize::Zeroize;
-pub const MAX_CREDENTIAL_REVISIONS: usize = 67;
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CredentialValue {
-    pub slot: String,
-    pub value: String,
-}
-impl std::fmt::Debug for CredentialValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("CredentialValue([redacted])")
-    }
-}
-impl Drop for CredentialValue {
-    fn drop(&mut self) {
-        self.value.zeroize();
-    }
-}
 pub(crate) fn identifier(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 96

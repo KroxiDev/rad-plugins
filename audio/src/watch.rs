@@ -19,8 +19,6 @@ struct Entry {
     subscription: Subscription,
     kind: Kind,
     selector: Selector,
-    /// What was last published, so an unchanged picture sends nothing.
-    shown: Option<VisualState>,
 }
 
 struct State {
@@ -34,16 +32,13 @@ struct State {
 }
 
 impl State {
-    /// Publishes the state of every entry whose state changed since it was last published.
+    /// Publishes a newly observed picture; the SDK renews unchanged states without payload.
     fn show(&mut self) {
         for entry in &mut self.entries {
             let Some(state) = visual_state(entry.kind, &entry.selector, &self.cache) else {
                 continue;
             };
-            if entry.shown.as_ref() != Some(&state) {
-                entry.subscription.update(state.clone());
-                entry.shown = Some(state);
-            }
+            entry.subscription.update(state);
         }
     }
 }
@@ -136,10 +131,10 @@ impl Watch {
             subscription: subscription.clone(),
             kind,
             selector,
-            shown: None,
         });
         if state.watching {
-            state.show();
+            // An add is not an observation: only the reader may assert freshness.
+            monitor.refresh();
             return;
         }
         match monitor.start() {

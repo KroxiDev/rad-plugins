@@ -84,7 +84,7 @@ fn ordinary_during_backoff_never_executes_on_a_later_attempt() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":3,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     let ready = recv(&mut host);
     let manifest: Value = serde_json::from_str(include_str!("../manifest.json")).unwrap();

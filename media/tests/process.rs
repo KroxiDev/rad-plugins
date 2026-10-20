@@ -61,8 +61,8 @@ impl Process {
     fn hello(&mut self, api: u32) {
         self.send(
             1,
-            json!({"kind":"hello","host_api":api,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":1}}),
+            json!({"kind":"hello","capabilities":["dynamic_options","jpeg","visual_freshness"],"host_api":api,"target":"x86_64-unknown-linux-gnu",
+                   "plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":2,"patch":0}}),
         );
     }
 
@@ -251,12 +251,12 @@ fn the_real_binary_handshakes_lists_options_acts_and_shows_a_visual() {
         .sync();
     let mut plugin = real_plugin(&bus, &runtime);
 
-    plugin.hello(2);
+    plugin.hello(1);
     let ready = plugin.recv().expect("ready");
     assert_eq!(ready["correlation"], json!({"generation":3,"request":1}));
     assert_eq!(
         ready["message"],
-        json!({"kind":"ready","plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":1,"patch":1}})
+        json!({"kind":"ready","capabilities":["dynamic_options","jpeg","visual_freshness"],"plugin_id":"org.rad.media","plugin_version":{"major":0,"minor":2,"patch":0}})
     );
 
     plugin.send(
@@ -327,7 +327,7 @@ fn without_displays_the_plugin_runs_no_listening_thread_and_stays_small() {
     let runtime = scratch_dir("runtime", false);
     let _player = FakePlayer::start(&bus, BRAVE);
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
     let names = |plugin: &Process| {
         plugin
@@ -369,7 +369,7 @@ fn the_real_binary_refuses_a_host_api_it_does_not_support() {
     let bus = PrivateBus::start();
     let runtime = scratch_dir("runtime", false);
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(1);
+    plugin.hello(2);
     assert!(
         plugin.recv().is_none(),
         "no ready for an unsupported host API"
@@ -386,7 +386,7 @@ fn the_real_binary_without_a_bus_address_reports_everything_unavailable() {
         .env_clear()
         .env("XDG_RUNTIME_DIR", runtime.as_os_str());
     let mut plugin = Process::spawn(command);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
     plugin.send(
         2,
@@ -420,7 +420,7 @@ fn the_real_binary_finds_the_standard_session_bus_when_the_variable_is_missing()
         .env_clear()
         .env("XDG_RUNTIME_DIR", bus.runtime_dir());
     let mut plugin = Process::spawn(command);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
     plugin.send(
         2,
@@ -478,7 +478,7 @@ fn a_burst_of_subscribing_and_unsubscribing_keeps_the_threads_few() {
     let frozen = FakePlayer::start(&bus, BRAVE);
     frozen.freeze();
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
 
     let census = Census::start(plugin.child.id());
@@ -498,8 +498,8 @@ fn a_burst_of_subscribing_and_unsubscribing_keeps_the_threads_few() {
 
 #[test]
 fn many_applications_that_hang_are_read_by_a_bounded_number_of_threads() {
-    // A hundred applications, all of them one frozen process. The host may have 64 buttons at
-    // once; here 64 come and go and 36 more come while the readers of the first ones are still
+    // A hundred applications, all of them one frozen process. The host may have 32 buttons at
+    // once; here 32 come and go and more come while the readers of the first ones are still
     // waiting for the frozen process, which is more readers than the host could ever need.
     let bus = PrivateBus::start();
     let runtime = scratch_dir("runtime", false);
@@ -512,27 +512,34 @@ fn many_applications_that_hang_are_read_by_a_bounded_number_of_threads() {
     healthy.command("status Playing").sync();
     frozen.freeze();
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
 
     let census = Census::start(plugin.child.id());
-    for app in 0..64u64 {
+    for app in 0..32u64 {
         subscribe(&mut plugin, 10 + app, &format!("app{app:03}"));
     }
     // Every reader is now waiting for the frozen process (it answers after 1.5 s at the most).
     std::thread::sleep(Duration::from_millis(300));
-    for app in 0..64u64 {
+    for app in 0..32u64 {
         unsubscribe(&mut plugin, 100 + app, 10 + app);
     }
-    for app in 64..100u64 {
-        subscribe(&mut plugin, 10 + app, &format!("app{app:03}"));
+    // Leave one of the 32 subscription slots for the healthy source. Churn the
+    // remaining applications without violating either that quota or monotonic IDs.
+    for app in 32..63u64 {
+        subscribe(&mut plugin, 200 + app, &format!("app{app:03}"));
+    }
+    for app in 63..100u64 {
+        let request = 400 + 2 * app;
+        subscribe(&mut plugin, request, &format!("app{app:03}"));
+        unsubscribe(&mut plugin, request + 1, request);
     }
     // A healthy application is shown too: its button waits for its turn, it is not refused.
-    subscribe(&mut plugin, 500, "strawberry");
+    subscribe(&mut plugin, 1000, "strawberry");
     let end = Instant::now() + Duration::from_secs(8);
     loop {
         let left = end.saturating_duration_since(Instant::now());
-        let frame = plugin.recv_for_within(500, left).expect("never shown");
+        let frame = plugin.recv_for_within(1000, left).expect("never shown");
         if frame["message"]["state"]["content"]["text"] == "Playing" {
             break;
         }
@@ -541,7 +548,7 @@ fn many_applications_that_hang_are_read_by_a_bounded_number_of_threads() {
     std::thread::sleep(2 * NAMED_FOR);
     let seen = census.finish();
     assert!(
-        (1..=64).contains(&seen.at_once("media-reader")),
+        (1..=32).contains(&seen.at_once("media-reader")),
         "at most as many readers as the host may have buttons: {seen:?}"
     );
     assert!(seen.at_once("media-monitor") <= 1, "{seen:?}");
@@ -555,7 +562,7 @@ fn a_button_that_comes_back_within_a_moment_is_served_by_the_same_threads() {
     let mut player = FakePlayer::start(&bus, "org.mpris.MediaPlayer2.strawberry");
     player.command("status Playing").sync();
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
 
     let census = Census::start(plugin.child.id());
@@ -615,7 +622,7 @@ fn cover_conversion_is_shared_and_retires_before_starting_again() {
         .command(&format!("art file://{}", path.display()))
         .sync();
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
     for round in 0..2 {
         let first = 10 + round * 10;
@@ -658,7 +665,7 @@ fn sigkill_releases_monitor_reader_and_converter_without_sdk_teardown() {
         .command(&format!("art file://{}", path.display()))
         .sync();
     let mut plugin = real_plugin(&bus, &runtime);
-    plugin.hello(2);
+    plugin.hello(1);
     plugin.recv().expect("ready");
     subscribe(&mut plugin, 2, "brave");
     let frame = plugin

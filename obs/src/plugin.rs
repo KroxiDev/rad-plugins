@@ -14,11 +14,18 @@ pub fn config() -> Config {
         "org.rad.obs",
         Version {
             major: 0,
-            minor: 1,
-            patch: 1,
+            minor: 2,
+            patch: 0,
         },
-        3..=3,
+        1..=1,
     )
+    .capabilities(vec![
+        "credentials".into(),
+        "settings".into(),
+        "dynamic_options".into(),
+        "response_timeout".into(),
+        "visual_freshness".into(),
+    ])
     .credential_slots(vec!["password".into()])
 }
 struct Wait {
@@ -62,13 +69,35 @@ struct Session {
     backoff: Duration,
 }
 struct Inner {
-    sessions: BTreeMap<u64, Session>,
+    sessions: BTreeMap<(u64, SocketAddrV4), Session>,
     stop: bool,
 }
 struct Shared {
     inner: Mutex<Inner>,
     wake: Condvar,
     endpoint: SocketAddrV4,
+}
+impl Shared {
+    fn endpoint_for(&self, settings: Option<&Parameters>) -> Result<SocketAddrV4, FailureCode> {
+        let port = if let Some(settings) = settings {
+            if settings.schema_version != 1 || settings.values.keys().any(|key| key != "port") {
+                return Err(FailureCode::InvalidParameters);
+            }
+            settings
+                .values
+                .get("port")
+                .map_or(Some(u64::from(self.endpoint.port())), Value::as_u64)
+                .filter(|port| (1..=65535).contains(port))
+                .ok_or(FailureCode::InvalidParameters)? as u16
+        } else {
+            self.endpoint.port()
+        };
+        // A test endpoint is never allowed to fall back to personal OBS, even through settings.
+        if self.endpoint.port() != 4455 && port == 4455 {
+            return Err(FailureCode::InvalidParameters);
+        }
+        Ok(SocketAddrV4::new(*self.endpoint.ip(), port))
+    }
 }
 pub struct ObsPlugin {
     shared: Arc<Shared>,
@@ -165,7 +194,15 @@ impl Plugin for ObsPlugin {
                 }
             }
         };
-        let revision = credentials.revision();
+        let endpoint = match self.shared.endpoint_for(call.settings.as_ref()) {
+            Ok(endpoint) => endpoint,
+            Err(code) => {
+                drop(credentials);
+                reply.send(Outcome::Failure { code });
+                return;
+            }
+        };
+        let revision = (credentials.revision(), endpoint);
         let mut inner = lock(&self.shared.inner);
         if inner
             .sessions
@@ -230,7 +267,12 @@ impl Plugin for ObsPlugin {
             reply.send(ChoiceList::Unavailable);
             return;
         };
-        let revision = credentials.revision();
+        let Ok(endpoint) = self.shared.endpoint_for(query.settings.as_ref()) else {
+            drop(credentials);
+            reply.send(ChoiceList::Unavailable);
+            return;
+        };
+        let revision = (credentials.revision(), endpoint);
         let mut inner = lock(&self.shared.inner);
         if inner
             .sessions
@@ -277,7 +319,10 @@ impl Plugin for ObsPlugin {
         let Some(credentials) = sub.credentials() else {
             return;
         };
-        let revision = credentials.revision();
+        let Ok(endpoint) = self.shared.endpoint_for(sub.settings()) else {
+            return;
+        };
+        let revision = (credentials.revision(), endpoint);
         if crate::workflow::Workflow::visual(sub.source(), sub.parameters()).is_err() {
             return;
         }
@@ -334,7 +379,9 @@ impl Plugin for ObsPlugin {
         inner.sessions.retain(|_, session| session.has_demand());
     }
     fn credentials_released(&self, revision: u64) {
-        lock(&self.shared.inner).sessions.remove(&revision);
+        lock(&self.shared.inner)
+            .sessions
+            .retain(|(r, _), _| *r != revision);
     }
 }
 fn run_worker(shared: Arc<Shared>) {
@@ -362,8 +409,8 @@ fn worker_turn(shared: &Shared, now: Instant) -> bool {
     }
     let mut replies = vec![];
     let mut choices = vec![];
-    for session in inner.sessions.values_mut() {
-        let result = session.step(shared.endpoint, now);
+    for ((_, endpoint), session) in &mut inner.sessions {
+        let result = session.step(*endpoint, now);
         let ready = session.ready();
         let mut keep = vec![];
         for mut wait in session.waits.drain(..) {

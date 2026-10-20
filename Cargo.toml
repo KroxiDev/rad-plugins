@@ -1,5 +1,5 @@
 [workspace]
-members = ["sdk", "audio", "media", "obs", "metrics"]
+members = ["sdk", "audio", "media", "obs", "metrics", "crates/rad-wire", "crates/rad-plugin-contract"]
 resolver = "2"
 
 [workspace.package]

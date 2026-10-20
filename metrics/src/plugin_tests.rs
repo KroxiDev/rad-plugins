@@ -67,11 +67,15 @@ fn two_consumers_share_demand_and_last_release_reaches_reader_before_fresh_resub
     let (mut host, wire) = UnixStream::pair().unwrap();
     host.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
     let input = wire.try_clone().unwrap();
-    let run = std::thread::spawn(move || rad_plugin_sdk::run(config(), plugin, input, wire));
+    // This unit-test peer uses the plugin's no-op options handler as a dispatch
+    // barrier. Negotiate that test-only path explicitly; the production metrics
+    // manifest remains visual-only and does not claim dynamic options.
+    let peer = config().capabilities(vec!["dynamic_options".into(), "visual_freshness".into()]);
+    let run = std::thread::spawn(move || rad_plugin_sdk::run(peer, plugin, input, wire));
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":2,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     assert_eq!(receive(&mut host, 1)["message"]["kind"], "ready");
     subscribe(&mut host, 2);

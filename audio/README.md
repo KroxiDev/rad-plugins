@@ -1,7 +1,8 @@
 # Audio plugin
 
 Mutes, unmutes and toggles the **microphone** and the **audio output**, and shows whether each one
-is muted. Plugin id `org.rad.audio`, version 0.1.0, x86_64 Linux, host API 2.
+is muted. Plugin id `org.rad.audio`, version 0.2.0, x86_64 Linux, plugin contract v1.
+See the [contract and author guide](../README.md) for the negotiated capabilities.
 
 ## Requirements
 
@@ -33,7 +34,9 @@ The **device** is either *Default device (follows changes)* or one specific devi
   `unavailable` and nothing else is touched: no other device is used in its place. Its state shows as
   unavailable and returns to `On`/`Muted` when the device reappears.
 
-State changes made elsewhere (a volume key, a mixer) show up within a heartbeat. While a state is
+State changes made elsewhere (a volume key, a mixer) trigger a fresh observation.
+Unchanged sources are reobserved every 10 seconds; observations renew 25-second validity
+without repeating image/state payloads. There is no independent SDK heartbeat. While a state is
 displayed the plugin follows the server with one `pactl subscribe` process; with nothing displayed
 it runs no background process at all.
 
@@ -59,5 +62,6 @@ cargo run --release -p rad-plugin-sdk --bin radp-pack -- \
 
 `cargo test -p rad-plugin-audio` never changes the audio of the machine. It runs the plugin against
 a fake `pactl` (`examples/fake_pactl.rs`) that keeps its state in a temporary directory and can
-simulate a stopped server, a hung command and garbage output. The one test that starts the real
-executable points it at an empty private runtime directory, where no sound server can answer.
+simulate a stopped server, a hung command and garbage output. The production no-server test runs the real executable and pactl inside a bwrap namespace
+with private runtime, HOME, devices and network, without access to the personal audio server.
+It fails closed if that isolation is unavailable.

@@ -1,5 +1,5 @@
 //! Minimal SDK for RAD Action Deck plugins: framing, protocol types, a dispatch loop with
-//! deferred replies and visual heartbeats, and the `radp-pack` packer.
+//! deferred replies and source-observed visual renewal, and the `radp-pack` packer.
 //!
 //! ```no_run
 //! use rad_plugin_sdk::*;
@@ -22,11 +22,15 @@
 //! }
 //!
 //! let version = Version { major: 1, minor: 0, patch: 0 };
-//! let _ = run_stdio(Config::new("org.example.hello", version, 2..=2), Hello);
+//! let config = Config::new("org.example.hello", version, 1..=1)
+//!     .capabilities(vec!["visual_freshness".into()]);
+//! let _ = run_stdio(config, Hello);
 //! ```
 mod error;
 pub mod frame;
+mod holds;
 mod licenses;
+mod output;
 pub mod pack;
 mod protocol;
 mod reply;
@@ -43,5 +47,3 @@ pub use subscription::{Subscription, SubscriptionId};
 
 mod credentials;
 pub use credentials::{CredentialValue, Credentials, MAX_CREDENTIAL_REVISIONS};
-
-mod json;

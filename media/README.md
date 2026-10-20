@@ -3,7 +3,8 @@
 Controls a media player (play, pause, play/pause, stop, previous, next) and shows what it is
 playing: the cover when the player offers one, otherwise its state. It talks to players through
 [MPRIS](https://specifications.freedesktop.org/mpris/latest/Player_Interface.html) on the session
-D-Bus. Plugin id `org.rad.media`, version 0.1.0, x86_64 Linux, host API 2.
+D-Bus. Plugin id `org.rad.media`, version 0.2.0, x86_64 Linux, plugin contract v1.
+See the [contract and author guide](../README.md) for the negotiated capabilities.
 
 ## Requirements
 
@@ -48,25 +49,34 @@ not, so a button can be set up before the player is started.
 The state follows the player: the plugin listens to the bus (a player starting or quitting, a
 player announcing a change) and reads the player again then. Besides that it reads each displayed
 player once every 10 seconds, so that a player that froze and can no longer announce anything is
-shown as stale instead of as what it last said. Nothing else is polled. With no state displayed the
+shown as stale instead of as what it last said. Every completed source observation
+renews 25-second validity; unchanged content produces a lightweight renewal, never
+a repeated cover. A blocked reader cannot renew cached state. Nothing else is polled. With no state displayed the
 plugin runs no listening thread at all (a second after the last one went away).
 
 ## Resources
 
+The current contract allows 32 subscriptions per plugin, and media bounds its reader
+threads to 32. Demand is shared by source and released with the last consumer.
+
+### Historical measurements (0.1.x, not 0.2.0 acceptance evidence)
+
 Memory and threads grow with the number of applications displayed, not with the number of
 buttons: each displayed application has one reader thread, and all of them share one bus monitor.
-Measured on one machine, release build, the plugin alone, with a small cover on every player:
+The following historical observations came from one machine and one older release
+build, with a small cover on every player. They are not a current performance budget
+or evidence for current maximum supported demand:
 
 | Displayed | Memory (RSS) | Threads |
 | --- | --- | --- |
 | 3 applications | about 8 MiB | 9 |
 | 8 applications | about 9 MiB | 14 |
-| 64 applications (the most the host allows) | about 28 MiB | 70 |
+| 64 applications (historical workload, above the current quota) | about 28 MiB | 70 |
 
-At rest the CPU use is below measurement resolution for a few applications, and about 0.2 % of one
+In that historical run, at rest the CPU use was below measurement resolution for a few applications, and about 0.2 % of one
 core with 64. Each further application costs about 0.3 MiB. Decoding a cover of 2048 x 2048 pixels
-(the largest accepted) adds about 24 MiB for a few milliseconds. There are never more than 64
-reader threads, and a reader never waits for a player for more than 1.5 seconds.
+(the largest accepted) adds about 24 MiB for a few milliseconds. Current source-observation and quota behavior is verified by isolated fixtures;
+new RSS/PSS/CPU measurements belong to the measurement phase, not this release.
 
 ## Known limits
 

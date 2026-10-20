@@ -16,10 +16,10 @@ impl Plugin for Probe {
 #[test]
 fn installation_is_acknowledged_without_authenticating_external_services() {
     let mut host = Host::start(
-        config(3..=3).credential_slots(vec!["password".into()]),
+        config(1..=1).credential_slots(vec!["password".into()]),
         Probe,
     );
-    host.handshake(3);
+    host.handshake(1);
     host.send(
         2,
         json!({"kind":"credentials","revision":1,"values":[{"slot":"password","value":"CANARY"}]}),
@@ -73,13 +73,13 @@ fn deferred_operations_keep_immutable_snapshots_and_release_runs_cleanup() {
     let (tx, rx) = channel();
     let (rtx, rrx) = channel();
     let mut host = Host::start(
-        config(3..=3).credential_slots(vec!["password".into()]),
+        config(1..=1).credential_slots(vec!["password".into()]),
         Deferred {
             calls: tx,
             released: rtx,
         },
     );
-    host.handshake(3);
+    host.handshake(1);
     install(&mut host, 2, 1, Some("old"));
     invoke_revision(&mut host, 3, 1);
     let (old, reply) = rx.recv_timeout(std::time::Duration::from_secs(2)).unwrap();
@@ -114,13 +114,13 @@ fn release_is_rejected_while_an_operation_handle_is_alive() {
     let (tx, rx) = channel();
     let (rtx, _) = channel();
     let mut host = Host::start(
-        config(3..=3).credential_slots(vec!["password".into()]),
+        config(1..=1).credential_slots(vec!["password".into()]),
         Deferred {
             calls: tx,
             released: rtx,
         },
     );
-    host.handshake(3);
+    host.handshake(1);
     install(&mut host, 2, 1, Some("secret"));
     invoke_revision(&mut host, 3, 1);
     let held = rx.recv_timeout(std::time::Duration::from_secs(2)).unwrap();
@@ -141,10 +141,10 @@ fn unknown_wrong_direction_duplicate_and_oversized_credentials_fail_closed() {
         json!({"kind":"invoke","action":"run","parameters":parameters(json!({})),"credential_revision":1}),
     ] {
         let mut host = Host::start(
-            config(3..=3).credential_slots(vec!["password".into()]),
+            config(1..=1).credential_slots(vec!["password".into()]),
             Probe,
         );
-        host.handshake(3);
+        host.handshake(1);
         host.send(2, message);
         let error = host.outcome().unwrap_err();
         assert!(!format!("{error:?} {error}").contains("CANARY"));
@@ -153,10 +153,10 @@ fn unknown_wrong_direction_duplicate_and_oversized_credentials_fail_closed() {
 #[test]
 fn revision_storage_is_bounded_and_released_maps_do_not_accumulate() {
     let mut host = Host::start(
-        config(3..=3).credential_slots(vec!["password".into()]),
+        config(1..=1).credential_slots(vec!["password".into()]),
         Probe,
     );
-    host.handshake(3);
+    host.handshake(1);
     let mut request = 2;
     for revision in 1..=200 {
         install(&mut host, request, revision, Some("canary"));
@@ -184,8 +184,8 @@ fn parser_rejects_oversized_decoded_strings_and_duplicate_parameter_keys() {
         serde_json::to_vec(&json!({"protocol":1,"correlation":{"generation":GENERATION,"request":2},"message":{"kind":"invoke","action":"run","parameters":{"schema_version":1,"values":{"x":"a".repeat(16385)}}}})).unwrap(),
         format!(r#"{{"protocol":1,"correlation":{{"generation":{GENERATION},"request":2}},"message":{{"kind":"invoke","action":"run","parameters":{{"schema_version":1,"values":{{"x":"a","x":"b"}}}}}}}}"#).into_bytes(),
     ] {
-        let mut host=Host::start(config(3..=3),Probe);
-        host.handshake(3);host.send_raw(&raw);
+        let mut host=Host::start(config(1..=1),Probe);
+        host.handshake(1);host.send_raw(&raw);
         assert!(host.finish().is_err());
     }
 }
@@ -207,17 +207,17 @@ impl Plugin for VisualOptions {
     fn unsubscribe(&self, _: SubscriptionId) {}
 }
 #[test]
-fn options_and_visuals_pin_their_own_revision_with_api_three_operation_caps() {
+fn options_and_visuals_pin_their_own_revision_with_negotiated_operation_caps() {
     let (otx, orx) = channel();
     let (vtx, vrx) = channel();
     let mut host = Host::start(
-        config(3..=3).credential_slots(vec!["password".into()]),
+        config(1..=1).credential_slots(vec!["password".into()]),
         VisualOptions {
             options: otx,
             visuals: vtx,
         },
     );
-    host.handshake(3);
+    host.handshake(1);
     install(&mut host, 2, 1, Some("first"));
     let mut options = Vec::new();
     for request in 3..=4 {
@@ -262,4 +262,24 @@ fn options_and_visuals_pin_their_own_revision_with_api_three_operation_caps() {
         json!({"kind":"credentials_released","revision":1})
     );
     host.finish().unwrap();
+}
+
+#[test]
+fn completed_start_keeps_credentials_pinned_until_matching_end() {
+    let mut host = Host::start(
+        config(1..=1)
+            .capabilities(vec!["controls".into(), "credentials".into()])
+            .credential_slots(vec!["password".into()]),
+        Probe,
+    );
+    host.send(1,json!({"kind":"hello","capabilities":["controls","credentials"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}));
+    assert_eq!(host.recv()["message"]["kind"], "ready");
+    install(&mut host, 2, 1, Some("synthetic-hold-secret"));
+    host.send(3,json!({"kind":"invoke","action":"hold","parameters":parameters(json!({})),"credential_revision":1,"control":{"control":{"kind":"button","index":0},"gesture":"hold_start"}}));
+    assert_eq!(host.recv()["message"]["outcome"]["status"], "success");
+    host.send(4, json!({"kind":"credentials_release","revision":1}));
+    assert!(
+        host.finish().is_err(),
+        "start's reply must not release credential lease needed by End"
+    );
 }

@@ -134,6 +134,11 @@ fn main() {
         time::Duration,
     };
     use tungstenite::{Message, WebSocket};
+    let expected_auth = if std::env::args().nth(1).as_deref() == Some("--checker-canary") {
+        "u1xZLpGBgxLi37BPq2PVY8n1ivcfeJDJYv6lh0moSVo="
+    } else {
+        "cISp6Ke/7kij8hHddTJ3KKN8jzFrOVBqfeSd6PJcJNk="
+    };
     let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
     listener.set_nonblocking(true).unwrap();
     output(json!({"port":listener.local_addr().unwrap().port()}));
@@ -222,10 +227,7 @@ fn main() {
                 };
                 if !*auth {
                     // Independent hashlib vector, not the plugin authentication function.
-                    if v["op"] != 1
-                        || v["d"]["authentication"]
-                            != "cISp6Ke/7kij8hHddTJ3KKN8jzFrOVBqfeSd6PJcJNk="
-                    {
+                    if v["op"] != 1 || v["d"]["authentication"] != expected_auth {
                         let _ = ws.close(Some(tungstenite::protocol::CloseFrame {
                             code: 4009u16.into(),
                             reason: "authentication failed".into(),

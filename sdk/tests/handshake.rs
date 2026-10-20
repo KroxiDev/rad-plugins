@@ -20,37 +20,37 @@ impl Plugin for Inert {
 
 #[test]
 fn answers_hello_with_its_own_identity_on_the_same_correlation() {
-    let mut host = Host::start(config(2..=2), Inert);
-    host.hello(2);
+    let mut host = Host::start(config(1..=1), Inert);
+    host.hello(1);
     let ready = host.recv();
     assert_eq!(correlation(&ready), (GENERATION, 1));
     assert_eq!(ready["protocol"], 1);
     assert_eq!(
         ready["message"],
-        json!({"kind":"ready","plugin_id":"org.example.probe",
+        json!({"kind":"ready","capabilities":["credentials","dynamic_options","jpeg","visual_freshness"],"plugin_id":"org.example.probe",
                "plugin_version":{"major":0,"minor":3,"patch":1}})
     );
     host.finish().unwrap();
 }
 
 #[test]
-fn accepts_every_host_api_inside_its_declared_range() {
-    for api in [1, 2, 3] {
-        let mut host = Host::start(config(1..=3), Inert);
-        host.handshake(api);
+fn accepts_major_one_inside_each_declared_range() {
+    for range in [1..=1, 1..=2, 1..=3] {
+        let mut host = Host::start(config(range), Inert);
+        host.handshake(1);
         host.finish().unwrap();
     }
 }
 
 #[test]
 fn refuses_a_host_api_outside_its_range_and_never_answers() {
-    for api in [1, 3, 99] {
-        let mut host = Host::start(config(2..=2), Inert);
+    for api in [2, 3, 99] {
+        let mut host = Host::start(config(1..=1), Inert);
         host.hello(api);
         host.expect_closed();
         let result = host.outcome();
         assert!(
-            matches!(result, Err(Error::IncompatibleHost { requested, min: 2, max: 2 }) if requested == api),
+            matches!(result, Err(Error::IncompatibleHost { requested, min: 1, max: 1 }) if requested == api),
             "api {api}: {result:?}"
         );
     }
@@ -58,13 +58,13 @@ fn refuses_a_host_api_outside_its_range_and_never_answers() {
 
 #[test]
 fn a_host_that_closes_the_pipe_ends_the_loop_cleanly() {
-    let host = Host::start(config(2..=2), Inert);
+    let host = Host::start(config(1..=1), Inert);
     assert!(
         host.finish().is_ok(),
         "closing before hello is not an error"
     );
-    let mut host = Host::start(config(2..=2), Inert);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), Inert);
+    host.handshake(1);
     assert!(host.finish().is_ok());
 }
 
@@ -90,14 +90,14 @@ fn protocol_violations_stop_the_loop_with_an_error() {
             "wrong protocol",
             Box::new(|h| {
                 h.send_raw(
-            br#"{"protocol":2,"correlation":{"generation":7,"request":1},"message":{"kind":"hello","host_api":2,"target":"t","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}}"#)
+            br#"{"protocol":2,"correlation":{"generation":7,"request":1},"message":{"kind":"hello","capabilities":[],"host_api":1,"target":"t","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}}"#)
             }),
         ),
         (
             "zero request",
             Box::new(|h| {
                 h.send_raw(
-            br#"{"protocol":1,"correlation":{"generation":7,"request":0},"message":{"kind":"hello","host_api":2,"target":"t","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}}"#)
+            br#"{"protocol":1,"correlation":{"generation":7,"request":0},"message":{"kind":"hello","capabilities":[],"host_api":1,"target":"t","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}}"#)
             }),
         ),
         (
@@ -109,7 +109,7 @@ fn protocol_violations_stop_the_loop_with_an_error() {
         ),
     ];
     for (name, violation) in violations {
-        let mut host = Host::start(config(2..=2), Inert);
+        let mut host = Host::start(config(1..=1), Inert);
         violation(&mut host);
         let result = host.outcome();
         assert!(result.is_err(), "{name}: {result:?}");
@@ -119,24 +119,24 @@ fn protocol_violations_stop_the_loop_with_an_error() {
 #[test]
 fn messages_only_a_plugin_may_send_are_violations_after_the_handshake() {
     let offenders = [
-        json!({"kind":"ready","plugin_id":"x","plugin_version":{"major":1,"minor":0,"patch":0}}),
+        json!({"kind":"ready","capabilities":[],"plugin_id":"x","plugin_version":{"major":1,"minor":0,"patch":0}}),
         json!({"kind":"result","outcome":{"status":"success"}}),
-        json!({"kind":"visual","state":{"availability":"unavailable"}}),
+        json!({"kind":"visual","valid_for_ms":1000,"state":{"availability":"unavailable"}}),
         json!({"kind":"choices","list":{"availability":"unavailable"}}),
     ];
     for message in offenders {
-        let mut host = Host::start(config(2..=2), Inert);
-        host.handshake(2);
+        let mut host = Host::start(config(1..=1), Inert);
+        host.handshake(1);
         host.send(2, message.clone());
         assert!(host.outcome().is_err(), "{message}");
     }
     // A second hello and a request from another generation are violations too.
-    let mut host = Host::start(config(2..=2), Inert);
-    host.handshake(2);
-    host.hello(2);
+    let mut host = Host::start(config(1..=1), Inert);
+    host.handshake(1);
+    host.hello(1);
     assert!(host.outcome().is_err(), "second hello");
-    let mut host = Host::start(config(2..=2), Inert);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), Inert);
+    host.handshake(1);
     host.send_raw(br#"{"protocol":1,"correlation":{"generation":8,"request":2},"message":{"kind":"unsubscribe","subscription":{"generation":8,"request":1}}}"#);
     assert!(host.outcome().is_err(), "other generation");
 }

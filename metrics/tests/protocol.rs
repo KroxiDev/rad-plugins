@@ -22,7 +22,7 @@ fn recv(s: &mut UnixStream) -> Value {
     serde_json::from_slice(&b).unwrap()
 }
 #[test]
-fn sdk_heartbeat_never_revives_stale_metrics_and_eof_does_not_join_driver() {
+fn no_blind_renewal_revives_stale_metrics_and_eof_does_not_join_driver() {
     let (release_tx, release_rx) = mpsc::channel();
     let mut calls = 0;
     let plugin = MetricsPlugin::with_reader(move || {
@@ -48,7 +48,7 @@ fn sdk_heartbeat_never_revives_stale_metrics_and_eof_does_not_join_driver() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","host_api":2,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":1,"patch":1}}),
+        json!({"kind":"hello","capabilities":["visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":2,"patch":0}}),
     );
     let ready = recv(&mut host);
     assert_eq!(ready["message"]["kind"], "ready");
@@ -74,10 +74,16 @@ fn sdk_heartbeat_never_revives_stale_metrics_and_eof_does_not_join_driver() {
         }
         assert!(Instant::now() < deadline, "never expired");
     }
-    // Several actual SDK heartbeat repeats after the worker stops responding.
-    for _ in 0..3 {
-        assert_eq!(recv(&mut host)["message"]["state"]["availability"], "stale");
-    }
+    host.set_read_timeout(Some(Duration::from_millis(900)))
+        .unwrap();
+    let mut header = [0; 4];
+    let error = host
+        .read_exact(&mut header)
+        .expect_err("no blind renewal of stale source");
+    assert!(matches!(
+        error.kind(),
+        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+    ));
     host.shutdown(std::net::Shutdown::Write).unwrap();
     assert!(
         done_rx

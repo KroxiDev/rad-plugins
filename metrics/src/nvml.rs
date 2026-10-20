@@ -1,5 +1,8 @@
 //! Deliberately small NVML allowlist: init, one device, utilization, memory, shutdown.
-//! ABI and field semantics: docs/phase5/metrics/DESIGN.md.
+//! Uses the NVML C ABI: `repr(C)` utilization fields are unsigned ints; v1 memory
+//! fields (total/free/used) are unsigned long long byte counts. GPU activity is
+//! `utilization.gpu`, not memory activity. Only device index 0 is queried; its
+//! physical identity is not stable across reboots. Failed or invalid reads are absent.
 use crate::readings::Memory;
 use std::ffi::{CStr, c_int, c_uint, c_ulonglong, c_void};
 

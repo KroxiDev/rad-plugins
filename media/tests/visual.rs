@@ -12,7 +12,7 @@ use support::*;
 
 const BRAVE: &str = "org.mpris.MediaPlayer2.brave.instance4242";
 const STRAWBERRY: &str = "org.mpris.MediaPlayer2.strawberry";
-/// A change must reach the host within one heartbeat (the SDK's is at most 500 ms).
+/// The integration's latency budget for a source change, not an SDK heartbeat.
 const HEARTBEAT: Duration = Duration::from_millis(500);
 
 fn secs(n: u64) -> Duration {
@@ -196,12 +196,14 @@ fn a_cover_file_replaced_under_the_same_name_is_shown_again() {
         .wait_visual(subscription, |v| v.jpeg_hex.is_some(), secs(5))
         .unwrap();
     assert!(centre(&red)[0] > 150);
+    // Drain before changing the file: a pending startup observation can already
+    // publish the new image, which must not be discarded as if it were old state.
+    host.discard_pending();
     // Same URL, new picture (a different size, so that the file certainly differs); the player
     // announces the track again.
     RgbaImage::from_pixel(300, 300, Rgba([20, 20, 220, 255]))
         .save(art.path())
         .unwrap();
-    host.discard_pending();
     player.command("title next track");
     let (_, blue) = host
         .wait_visual(
@@ -323,7 +325,7 @@ fn two_buttons_for_the_same_application_show_the_same_thing() {
 }
 
 #[test]
-fn nothing_is_read_while_nothing_changes_and_the_last_state_keeps_being_repeated() {
+fn between_observations_no_cached_state_is_blindly_renewed() {
     let bus = PrivateBus::start();
     let mut player = FakePlayer::start(&bus, STRAWBERRY);
     let mut host = Host::start(Some(bus.address()), quick());
@@ -335,17 +337,15 @@ fn nothing_is_read_while_nothing_changes_and_the_last_state_keeps_being_repeated
     std::thread::sleep(Duration::from_millis(400));
     let reads = player.reads_of("PlaybackStatus");
     host.discard_pending();
-    let mut repeats = 0;
-    let end = Instant::now() + Duration::from_millis(1400);
-    while let Some(visual) =
-        host.next_visual(subscription, end.saturating_duration_since(Instant::now()))
-    {
-        assert!(visual.is("current", Some("Stopped")));
-        repeats += 1;
-    }
     assert!(
-        repeats >= 2,
-        "the heartbeat repeated the state {repeats} times"
+        host.take(
+            |f| matches!(
+                f["message"]["kind"].as_str(),
+                Some("visual" | "visual_renew")
+            ),
+            Duration::from_millis(1400)
+        )
+        .is_none()
     );
     assert_eq!(
         player.reads_of("PlaybackStatus"),
@@ -378,8 +378,8 @@ fn a_player_that_stops_answering_is_marked_stale_and_the_others_carry_on() {
     host.wait_state(hung, "stale", Some("Playing"), secs(3))
         .unwrap();
 
-    stuck.thaw();
     host.discard_pending();
+    stuck.thaw();
     fine.command("status Paused");
     host.wait_state(hung, "current", Some("Playing"), secs(3))
         .unwrap();
@@ -544,13 +544,10 @@ fn a_subscription_without_a_usable_player_is_unavailable() {
         json!({"player":7}),
         json!({"player":"a\nb"}),
     ] {
-        host.send(
-            900,
-            json!({"kind":"subscribe","source":"now_playing","parameters":{"schema_version":1,"values":values}}),
-        );
+        let subscription = host.subscribe_values("now_playing", values.clone());
         let frame = host
             .take(
-                |f| f["correlation"]["request"] == 900 && f["message"]["kind"] == "visual",
+                |f| f["correlation"]["request"] == subscription && f["message"]["kind"] == "visual",
                 secs(3),
             )
             .expect("a visual");
@@ -559,15 +556,12 @@ fn a_subscription_without_a_usable_player_is_unavailable() {
             json!({"availability":"unavailable"}),
             "{values}"
         );
-        host.unsubscribe(900);
+        host.unsubscribe(subscription);
     }
-    host.send(
-        901,
-        json!({"kind":"subscribe","source":"other","parameters":{"schema_version":1,"values":{"player":"strawberry"}}}),
-    );
+    let subscription = host.subscribe_values("other", json!({"player":"strawberry"}));
     let frame = host
         .take(
-            |f| f["correlation"]["request"] == 901 && f["message"]["kind"] == "visual",
+            |f| f["correlation"]["request"] == subscription && f["message"]["kind"] == "visual",
             secs(3),
         )
         .expect("a visual");

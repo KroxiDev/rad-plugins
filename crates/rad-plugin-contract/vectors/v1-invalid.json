@@ -1,0 +1,5 @@
+[
+  {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"visual","valid_for_ms":1000,"state":{"availability":"unavailable","unexpected":true}}},
+  {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"choices","list":{"availability":"unavailable","unexpected":true}}},
+  {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"result","outcome":{"status":"success","unexpected":true}}}
+]

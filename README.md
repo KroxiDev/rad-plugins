@@ -1,34 +1,33 @@
 # RAD plugins
 
-Plugins for RAD Action Deck and the small SDK they are built on. This is a standalone Cargo
-workspace: it does not depend on any RAD crate, it implements the documented plugin protocol
-(length-prefixed JSON frames over stdin and stdout) on its own.
+The official plugins and SDK live in this workspace so the host and SDK can change
+atomically. Host and SDK use the same [`rad-plugin-contract`](crates/rad-plugin-contract)
+crate; there is no separate SDK definition of the wire types.
 
-| Directory | Crate | What it is |
+The authoritative documentation for authors is in **[KroxiDev/rad-plugins](https://github.com/KroxiDev/rad-plugins)**:
+
+- [Plugin contract v1](https://github.com/KroxiDev/rad-plugins/blob/main/docs/contract-v1.md)
+- [Author guide](https://github.com/KroxiDev/rad-plugins/blob/main/docs/author-guide.md)
+- [Published packages](https://github.com/KroxiDev/rad-plugins/releases)
+
+Contract v1 uses a major version and negotiated capabilities, immutable settings
+snapshots, source-observed visual renewal, and bounded nonblocking SDK output.
+The old linear host APIs 2/3 are not contract v1. Use matching host and plugin
+releases; installing a new RAD does not silently update installed packages.
+Previously installed prerelease packages remain read-only inventory until updated:
+their original metadata and previous version are preserved, but their old protocol
+is never executed as contract v1. Package administration remains available.
+
+| Directory | Crate | Integration |
 | --- | --- | --- |
-| [`sdk`](sdk) | `rad-plugin-sdk` | Framing, protocol types, the handshake and dispatch loop with deferred replies and visual heartbeats, and the `radp-pack` packer. |
-| [`audio`](audio) | `rad-plugin-audio` | Mute, unmute and toggle the microphone and the audio output through `pactl`. |
-| [`media`](media) | `rad-plugin-media` | Control a media player (play, pause, stop, previous, next) and show its cover through MPRIS on the session D-Bus. |
-| [`metrics`](metrics) | `rad-plugin-metrics` | Visual-only CPU/RAM and NVIDIA GPU/VRAM, shared polling with bounded reader work and independent freshness; metrics-v0.1.1 published. |
-| [`obs`](obs) | `rad-plugin-obs` | Local OBS Program, filters, scene items, recording, streaming and connection wait, using host API3 credentials. |
+| [`sdk`](sdk) | `rad-plugin-sdk` | Shared contract, handshake, dispatch, bounded output and `radp-pack`. |
+| [`audio`](audio) | `rad-plugin-audio` | Microphone and output audio through `pactl`. |
+| [`media`](media) | `rad-plugin-media` | MPRIS playback and cover art through the session D-Bus. |
+| [`obs`](obs) | `rad-plugin-obs` | OBS actions, dynamic choices and visual state. |
+| [`metrics`](metrics) | `rad-plugin-metrics` | CPU/RAM and NVIDIA GPU/VRAM visual state. |
 
-The previous metrics release is
-[`metrics-v0.1.0`](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.0).
-Its acceptance notes describe that historical release, not the validation or
-publication of newer source changes. Fixtures are not release artifacts.
-
-Published updates (2026-10-20): [media 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/media-v0.1.1),
-[OBS 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/obs-v0.1.1) and
-[metrics 0.1.1](https://github.com/KroxiDev/rad-plugins/releases/tag/metrics-v0.1.1).
-[Audio 0.1.0](https://github.com/KroxiDev/rad-plugins/releases/tag/audio-v0.1.0)
-remains the existing production release, whose resource acquisition was already
-deferred; the SDK remains **0.1.0**. These updates acquire external
-resources on demand and release them after their last consumer. Process sleep
-also requires a RAD host implementing the demand-driven lifecycle contract below;
-plugin updates alone do not add host sleep. Manifest contract 1, envelope protocol 1,
-and the existing host API ranges (audio/media/metrics: 2; OBS: 3), definition IDs
-and configuration schemas are unchanged. Release publication does not update an
-existing installation automatically or establish new hardware measurements.
+Fixtures are test instruments, never release artifacts. Tests do not certify real
+hardware, every distribution, or the safety of an arbitrary native plugin.
 
 ## Build, test, package
 
@@ -65,164 +64,6 @@ cargo run --release -p rad-plugin-sdk --bin radp-pack -- \
 format version, the manifest and executable lengths, then the two blobs. The manifest must be
 1 to 65536 bytes and the executable 1 byte to 64 MiB; anything else is refused before it is read.
 
-## Writing a plugin with the SDK
-
-### Demand-driven resources
-
-The host lifecycle contract defaults manifest `lifecycle` to `on_demand`;
-developers may explicitly select `always_loaded` for a constant-process need.
-This is host metadata, not a `Config` switch or a new protocol message.
-Construct on-demand plugins inertly. Acquire only resources needed by
-`invoke`, `options` or `subscribe`, share them among compatible consumers, and
-release them when the last consumer finishes (`unsubscribe` ends a visual
-consumer). A visible action may keep the process alive without prewarming its
-resources. Reloads must refresh current state without replaying actions.
-`always_loaded` may retain a required connection, not indiscriminately activate
-every reader or source.
-
-The SDK does not optimize arbitrary plugin internals: resource ownership and
-cleanup are the author's responsibility. The host retains demand for admitted
-executions (including future steps), outstanding queries and residual work;
-a reply deadline does not prove that work ended. Preserve credential-revision
-isolation while sharing resources. Ordinary sleep/wake does not replay actions,
-and a failed process is not transparently retried.
-
-Older plugins that eagerly acquire resources need adaptation even when their
-manifest omits `lifecycle`. Compatibility with older hosts that do not understand
-this metadata is not promised. These source requirements do not claim that
-installed release artifacts have been upgraded or that validation is complete.
-
-Implement `rad_plugin_sdk::Plugin` and hand it to `run_stdio`:
-
-```rust
-use rad_plugin_sdk::*;
-
-struct Hello;
-impl Plugin for Hello {
-    fn invoke(&self, _call: Invoke, reply: Reply<Outcome>) {
-        // Slow work goes on another thread; the reply can be sent from anywhere.
-        std::thread::spawn(move || reply.send(Outcome::Success));
-    }
-    fn options(&self, _query: OptionsQuery, reply: Reply<ChoiceList>) {
-        reply.send(ChoiceList::Unavailable);
-    }
-    fn subscribe(&self, subscription: Subscription) {
-        subscription.update(VisualState::Current {
-            content: VisualContent { text: Some("Hello".into()), ..Default::default() },
-        });
-    }
-    fn unsubscribe(&self, _subscription: SubscriptionId) {}
-}
-
-fn main() {
-    let config = Config::new("org.example.hello", Version { major: 1, minor: 0, patch: 0 }, 2..=2);
-    let _ = run_stdio(config, Hello);
-}
-```
-
-What the SDK does for you:
-
-- **Handshake.** Answers the host's hello with the plugin's own id and version, and refuses (without
-  answering) a host API outside the range in `Config`.
-- **Deferred replies.** `invoke` and `options` get a `Reply` that can be completed later, from any
-  thread. A reply dropped without an answer still answers (`failed` / `unavailable`).
-- **Bounded concurrency.** At most 16 actions run at once (the 17th is answered `busy`). API1/2 allow
-  4 option queries and 64 subscriptions; API3 allows 2 queries and 32 subscriptions. The host's
-  limits remain 2 queries and 32 subscriptions for every API. Extra queries are answered `unavailable`;
-  nothing is queued. A handler that panics
-  fails only its own request.
-- **Visual heartbeat.** The host treats a visual source as stale one second after its last message.
-  Every `Subscription` has its last state repeated every 400 ms (never more than 500 ms).
-- **Safe output.** Frames from any thread never interleave. Replies and visual states the host would
-  reject (bad labels, duplicate option values, oversize frames) are replaced by `unavailable`
-  instead of getting the plugin disconnected.
-
-## Standalone protocol reference (host API 2)
-
-The manifest JSON in each plugin directory is the package's public declaration:
-`contract: 1`, plugin `id`, semantic `version` object, inclusive `host_min`/`host_max`,
-`targets`, `actions` and `visuals`. Each definition has `id`, `label`, versioned
-`schema.fields` and `credential_slots`. Fields have `id`, `label`, `required` and
-`kind` (`boolean`, bounded `integer`, bounded `text`, fixed `choice`, or
-`dynamic_choice` with `depends_on`). Dependencies name earlier choice fields;
-API 2 is required for dynamic choices. Parameters are `{schema_version, values}`.
-The audio/media manifests are complete examples; the host validates before dispatch.
-
-A RADP v1 file has a 20-byte header: ASCII `RADP`, big-endian u32 version `1`,
-big-endian u32 manifest byte count, big-endian u64 executable byte count; then exactly
-the manifest JSON and executable bytes, with no paths, compression or trailing data.
-Manifest: 1–65536 bytes; executable: 1 byte–64 MiB. `radp-pack` checks these bounds;
-it is a container writer, not a manifest semantic validator or code sandbox.
-
-The executable reads stdin and writes stdout as framed UTF-8 JSON: a big-endian u32
-length followed by 1–65536 bytes. No logs on stdout. Each envelope is
-`{"protocol":1,"correlation":{"generation":1,"request":1},"message":{...}}`.
-The host assigns correlations; every reply echoes the request correlation unchanged.
-The definitive serde message/type schema is [sdk/src/protocol.rs](sdk/src/protocol.rs).
-
-| Direction | Message (`kind`) | Other fields |
-| --- | --- | --- |
-| Host → plugin | `hello` (request 1) | `host_api`, `target`, `plugin_id`, `plugin_version` |
-| Plugin → host | `ready` | `plugin_id`, `plugin_version` matching the manifest |
-| Host → plugin | `options` | `scope` (`action` or `visual`), `definition`, `field`, `context` (Parameters containing only dependency values) |
-| Plugin → host | `choices` | `list`: `{availability:"available", options:[{value,label}]}` or `{availability:"unavailable"}` |
-| Host → plugin | `invoke` | `action`, `parameters` |
-| Plugin → host | `result` | `outcome`: `{status:"success"}` or `{status:"failure",code:...}` |
-| Host → plugin | `subscribe` | `source`, `parameters` |
-| Plugin → host | `visual` | `state`: `{availability:"current" or "stale",content:...}` or `{availability:"unavailable"}`; correlation of subscribe |
-| Host → plugin | `unsubscribe` | `subscription`: correlation of subscribe |
-
-Failure codes: `invalid_parameters`, `unavailable`, `failed`, `timed_out`, `busy`,
-`incompatible`, `credentials_unavailable`. Options have at most 64 unique values;
-values/labels are nonempty, at most 256 UTF-8 bytes, with no control characters.
-An available empty list differs from unavailable. A saved missing value is not
-silently replaced. Queries do not invoke actions. The host allows 2 outstanding
-queries per plugin, including expired unanswered ones, with a 2000 ms timeout;
-late replies must retain their original correlation.
-
-Visual content contains text, RGBA color, and/or one lowercase-hex PNG/JPEG image
-(`png_hex` or API-2 `jpeg_hex`, never both), at most 16384 hex characters (8 KiB).
-The host validates/normalizes images independently. The SDK repeats current visual
-state every 400 ms by default; the host marks it stale after 1000 ms without an
-update. Dynamic choices and JPEG need negotiated API 2; the envelope protocol and
-manifest contract remain version 1. Audio/media do not use credentials or network administration.
-See the SDK source for validation and resource constants.
-
-## Host API3: immutable credentials and connection-wait budget
-
-API3 keeps envelope protocol1 and manifest contract1. A manifest declaring credential slots
-requires `host_min >= 3`, at most32 distinct slots across its definitions. Configure the SDK with
-`Config::credential_slots(...)` matching that union. Secrets are never ordinary Parameters,
-configuration, options, visual content or logs; applications store and deliver them separately.
-
-| Direction | Message (`kind`) | Fields |
-|---|---|---|
-| Host → plugin | `credentials` | positive monotonic `revision`, `values: [{slot,value}]` |
-| Plugin → host | `credentials_applied` | same `revision`, correlated ACK |
-| Host → plugin | `credentials_release` | `revision` to retire |
-| Plugin → host | `credentials_released` | same `revision`, correlated ACK after cleanup |
-
-API3 Invoke/Options/Subscribe carry `credential_revision` for a plugin declaring slots.
-The host waits for Applied before sending an operation, and releases only after all owners,
-including residual work and admitted future steps, are gone. There are at most67 retained maps,
-32 entries/map,4096 UTF-8 bytes/value and8192 bytes/map. Empty present differs from omitted.
-Installation/release ACK deadline is2000ms. Installing new credentials does not mutate older maps.
-Legacy API1/2 messages omit the new optional operation field.
-
-`Invoke.credentials`, `OptionsQuery.credentials` and `Subscription::credentials()` provide
-immutable handles with `revision()` and borrowed `get(slot)`. Drop completed call/query handles
-before `reply.send(...)`; deferred work and subscriptions retain theirs until actually finished.
-Do not retain a Credentials handle in an idle external session: it prevents release. Key sessions
-by revision and retire their external resources synchronously in
-`Plugin::credentials_released(revision)`, **before returning** and the SDK's ACK. A release with
-live handles fails closed; a timeout is not proof of cancellation or released resources.
-
-An API3 action may declare optional `response_timeout: {field,default_seconds}`. The named schema
-field must be an optional integer with exact bounds1..120; the default is in that range. The host
-captures its budget at admission and counts it from dispatch. Ordinary definitions keep5000ms;
-the OBS connection wait uses30s by default. This metadata is not valid on visual definitions or
-API1/2. It does not introduce retries, cancellation or a new dynamic-options protocol.
-
 ## Licenses and distribution
 
 Project code is [MIT licensed](LICENSE). This does **not** relicense dependencies;
@@ -241,3 +82,9 @@ remain applicable; consult the distribution's packages for their source and noti
 This source documentation is self-contained; using the plugin does not require access
 to a private application repository. A source tree or package prepared locally is not
 proof that a public repository or release has been published.
+
+## Source provenance
+
+This is a mechanical distribution snapshot, not a second protocol definition.
+See [SOURCE.md](SOURCE.md) for the canonical RAD commit, source hashes and the
+small path-only rebases needed by this standalone workspace. Pin `sdk-v0.2.0`.

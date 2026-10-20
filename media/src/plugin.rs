@@ -12,11 +12,16 @@ pub fn config() -> Config {
         "org.rad.media",
         Version {
             major: 0,
-            minor: 1,
-            patch: 1,
+            minor: 2,
+            patch: 0,
         },
-        2..=2,
+        1..=1,
     )
+    .capabilities(vec![
+        "dynamic_options".into(),
+        "jpeg".into(),
+        "visual_freshness".into(),
+    ])
 }
 
 pub struct MediaPlugin {

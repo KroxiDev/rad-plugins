@@ -86,7 +86,7 @@ fn publish(buttons: &Mutex<Buttons>, interval: &Arc<()>, state: VisualState) {
     if !Arc::ptr_eq(&buttons.interval, interval) {
         return;
     }
-    if buttons.shown.as_ref() != Some(&state) {
+    {
         for subscription in &buttons.subscriptions {
             subscription.update(state.clone());
         }
@@ -290,10 +290,8 @@ impl Watch {
                 buttons.interval = Arc::new(());
                 group.wake.now();
             }
-            // A button joining a group that already shows something shows it straight away.
-            if let Some(shown) = &buttons.shown {
-                subscription.update(shown.clone());
-            }
+            // Cached content is not a new observation. Wake the source for this subscriber.
+            group.wake.now();
             buttons.subscriptions.push(subscription);
         }
         self.start_readers(&mut state);

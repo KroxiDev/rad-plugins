@@ -11,11 +11,12 @@ pub fn config() -> Config {
         "org.rad.metrics",
         Version {
             major: 0,
-            minor: 1,
-            patch: 1,
+            minor: 2,
+            patch: 0,
         },
-        2..=2,
+        1..=1,
     )
+    .capabilities(vec!["visual_freshness".into()])
 }
 const SOURCES: [&str; 4] = ["cpu", "ram", "gpu", "vram"];
 struct Shared {
@@ -62,13 +63,15 @@ impl MetricsPlugin {
                 let mut shared = lock.lock().unwrap_or_else(PoisonError::into_inner);
                 while !shared.stopped {
                     let now = origin.elapsed();
+                    let previous_observation = poller.observation();
                     let states = poller.tick_demand(now, shared.demand);
+                    let observed = previous_observation != poller.observation();
                     // Serialize publication and subscription changes: no old epoch can overtake
                     // a removal/resubscription. The poller never performs I/O here.
                     for subscription in shared.subscriptions.values() {
                         if let Some(index) =
                             SOURCES.iter().position(|s| *s == subscription.source())
-                            && states[index] != shared.states[index]
+                            && (observed || states[index] != shared.states[index])
                         {
                             subscription.update(states[index].clone());
                         }

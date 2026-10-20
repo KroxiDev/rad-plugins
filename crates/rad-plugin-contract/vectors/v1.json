@@ -1,0 +1,6 @@
+[
+ {"protocol":1,"correlation":{"generation":7,"request":1},"message":{"kind":"hello","host_api":1,"capabilities":["visual_freshness"],"target":"x86_64-unknown-linux-gnu","plugin_id":"org.example.probe","plugin_version":{"major":1,"minor":0,"patch":0}}},
+ {"protocol":1,"correlation":{"generation":7,"request":1},"message":{"kind":"ready","capabilities":["visual_freshness"],"plugin_id":"org.example.probe","plugin_version":{"major":1,"minor":0,"patch":0}}},
+ {"protocol":1,"correlation":{"generation":7,"request":2},"message":{"kind":"visual","valid_for_ms":25000,"state":{"availability":"current","content":{"text":"Paused","png_hex":null,"color":null}}}},
+ {"protocol":1,"correlation":{"generation":7,"request":2},"message":{"kind":"visual_renew","valid_for_ms":25000}}
+]

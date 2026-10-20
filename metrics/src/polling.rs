@@ -222,6 +222,9 @@ impl Poller {
             }
         }
     }
+    pub(crate) fn observation(&self) -> Option<Duration> {
+        self.sample.as_ref().map(|s| s.0)
+    }
     /// No idle timer once release has been acknowledged. A blocked reader remains terminal.
     pub(crate) fn wake_after(&self, now: Duration) -> Option<Duration> {
         let running = !self.stopped.load(Ordering::Acquire);

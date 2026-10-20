@@ -1,9 +1,9 @@
 //! Handshake and the dispatch loop.
 use crate::{
-    ChoiceList, Envelope, Error, FailureCode, Message, OptionsScope, Outcome, PROTOCOL, Parameters,
-    Reply, Subscription, SubscriptionId, Version, frame,
+    ChoiceList, Envelope, Error, FailureCode, Message, OptionsScope, Outcome, Parameters, Reply,
+    Subscription, SubscriptionId, Version, frame,
     reply::Slots,
-    subscription::{Heartbeat, Refused, Registry},
+    subscription::{Refused, Registry},
     writer::Writer,
 };
 use std::{
@@ -11,20 +11,14 @@ use std::{
     ops::RangeInclusive,
     panic::{AssertUnwindSafe, catch_unwind},
     sync::Arc,
-    time::Duration,
 };
 
-/// Default period of the visual heartbeat. The host expires a visual 1000 ms after its last
-/// message, so the period must stay well below that.
-pub const DEFAULT_HEARTBEAT: Duration = Duration::from_millis(400);
-/// Longest heartbeat period the SDK will use, whatever [`Config::heartbeat`] asks for.
-pub const MAX_HEARTBEAT: Duration = Duration::from_millis(500);
 /// Actions a plugin may run at once; the next one is answered `busy` without being queued.
 pub const MAX_INVOCATIONS: usize = 16;
 /// Option queries a plugin may answer at once; extra ones are answered `unavailable`.
-pub const MAX_OPTION_QUERIES: usize = 4;
+pub const MAX_OPTION_QUERIES: usize = 2;
 /// Visual subscriptions kept at once; extra ones are answered `unavailable` and not tracked.
-pub const MAX_SUBSCRIPTIONS: usize = 64;
+pub const MAX_SUBSCRIPTIONS: usize = 32;
 
 /// Identity and runtime settings of a plugin.
 ///
@@ -37,7 +31,7 @@ pub struct Config {
     pub version: Version,
     /// Inclusive range of host APIs the plugin supports (`host_min..=host_max` of the manifest).
     pub host_api: RangeInclusive<u32>,
-    heartbeat: Duration,
+    capabilities: Vec<String>,
     credential_slots: Vec<String>,
 }
 impl Config {
@@ -46,7 +40,7 @@ impl Config {
             id: id.into(),
             version,
             host_api,
-            heartbeat: DEFAULT_HEARTBEAT,
+            capabilities: vec![],
             credential_slots: Vec::new(),
         }
     }
@@ -56,10 +50,9 @@ impl Config {
         self.credential_slots = slots;
         self
     }
-    /// Period at which the last state of every subscription is repeated. Clamped to
-    /// [`MAX_HEARTBEAT`].
-    pub fn heartbeat(mut self, interval: Duration) -> Self {
-        self.heartbeat = interval.min(MAX_HEARTBEAT);
+    /// Features declared by this plugin, matching its manifest.
+    pub fn capabilities(mut self, capabilities: Vec<String>) -> Self {
+        self.capabilities = capabilities;
         self
     }
 }
@@ -69,12 +62,15 @@ impl Config {
 pub struct Invoke {
     pub credentials: Option<crate::Credentials>,
     pub action: String,
+    pub settings: Option<Parameters>,
+    pub control: Option<crate::ControlEvent>,
     pub parameters: Parameters,
 }
 
 /// A request for the current options of a dynamic choice field.
 #[derive(Debug, Clone)]
 pub struct OptionsQuery {
+    pub settings: Option<Parameters>,
     pub credentials: Option<crate::Credentials>,
     pub scope: OptionsScope,
     pub definition: String,
@@ -111,6 +107,8 @@ pub trait Plugin: Send + Sync + 'static {
 
 /// Serves the host on `input`/`output` until the host closes the stream (`Ok`), breaks the
 /// protocol or declares an incompatible API (`Err`).
+/// A custom output must itself enforce bounded writes. Native plugins should use
+/// [`run_stdio`], which provides the nonblocking stdout deadline and terminal close.
 pub fn run<P, R, W>(config: Config, plugin: P, input: R, output: W) -> Result<(), Error>
 where
     P: Plugin,
@@ -119,26 +117,27 @@ where
 {
     let writer = Writer::new(output);
     let mut input = BufReader::new(input);
-    let Some((generation, api)) = handshake(&config, &mut input, &writer)? else {
+    let Some((generation, capabilities)) = handshake(&config, &mut input, &writer)? else {
         return Ok(());
     };
     let credentials = crate::credentials::Registry::new(config.credential_slots)?;
-    if credentials.declared() && (api < 3 || *config.host_api.start() < 3) {
-        return Err(Error::Protocol("credentials require API 3"));
+    if credentials.declared()
+        && !rad_plugin_contract::supports(&capabilities, rad_plugin_contract::CREDENTIALS)
+    {
+        return Err(Error::Protocol("credentials capability required"));
     }
     let mut session = Session {
-        api,
+        capabilities,
         credentials,
         plugin,
         writer,
         generation,
         invocations: Slots::new(MAX_INVOCATIONS),
-        queries: Slots::new(if api >= 3 { 2 } else { MAX_OPTION_QUERIES }),
-        subscriptions: Registry::new(if api >= 3 { 32 } else { MAX_SUBSCRIPTIONS }),
+        holds: crate::holds::Holds::new(),
+        queries: Slots::new(MAX_OPTION_QUERIES),
+        subscriptions: Registry::new(MAX_SUBSCRIPTIONS),
     };
-    let heartbeat = Heartbeat::start(Arc::clone(&session.subscriptions), config.heartbeat);
     let result = session.serve(&mut input);
-    drop(heartbeat);
     // The host is gone, so every subscription is over.
     for subscription in session.subscriptions.drain() {
         guarded(|| session.plugin.unsubscribe(subscription.id()));
@@ -148,16 +147,18 @@ where
 
 /// Serves the host over stdin and stdout.
 pub fn run_stdio<P: Plugin>(config: Config, plugin: P) -> Result<(), Error> {
-    run(config, plugin, std::io::stdin(), std::io::stdout())
+    let output = crate::output::HostOutput::open(1).unwrap_or_else(|_| std::process::exit(74));
+    run(config, plugin, std::io::stdin(), output)
 }
 
 struct Session<P> {
     plugin: P,
-    api: u32,
+    capabilities: Vec<String>,
     credentials: crate::credentials::Registry,
     writer: Writer,
     generation: u64,
     invocations: Arc<Slots>,
+    holds: crate::holds::Holds,
     queries: Arc<Slots>,
     subscriptions: Arc<Registry>,
 }
@@ -166,21 +167,34 @@ impl<P: Plugin> Session<P> {
     fn serve(&mut self, input: &mut impl Read) -> Result<(), Error> {
         let mut last_request = 1;
         while let Some(envelope) = next_envelope(input)? {
+            if !envelope.message.permitted(&self.capabilities) {
+                return Err(Error::Protocol("unnegotiated feature"));
+            }
             let correlation = envelope.correlation;
             if correlation.generation != self.generation {
                 return Err(Error::Protocol("generation changed"));
             }
-            if self.api >= 3 && correlation.request <= last_request {
+            if correlation.request <= last_request {
                 return Err(Error::Protocol("request reused"));
             }
             last_request = correlation.request;
             match envelope.message {
-                Message::Credentials { revision, values } if self.api >= 3 => {
+                Message::Credentials { revision, values }
+                    if rad_plugin_contract::supports(
+                        &self.capabilities,
+                        rad_plugin_contract::CREDENTIALS,
+                    ) =>
+                {
                     self.credentials.install(revision, values)?;
                     self.writer
                         .send(correlation, Message::CredentialsApplied { revision })?;
                 }
-                Message::CredentialsRelease { revision } if self.api >= 3 => {
+                Message::CredentialsRelease { revision }
+                    if rad_plugin_contract::supports(
+                        &self.capabilities,
+                        rad_plugin_contract::CREDENTIALS,
+                    ) =>
+                {
                     self.credentials.release(revision)?;
                     // A failed cleanup cannot acknowledge external resources released.
                     catch_unwind(AssertUnwindSafe(|| {
@@ -191,12 +205,37 @@ impl<P: Plugin> Session<P> {
                         .send(correlation, Message::CredentialsReleased { revision })?;
                 }
                 Message::Invoke {
+                    settings,
+                    control,
                     action,
                     parameters,
                     credential_revision,
                 } => {
                     let credentials = self.credentials.acquire(credential_revision)?;
-                    match self.invocations.acquire() {
+                    use rad_plugin_contract::ControlGesture;
+                    let permit = match control.as_ref().map(|c| c.gesture) {
+                        Some(ControlGesture::HoldEnd) => Some(self.holds.release(
+                            &control.as_ref().expect("matched control").control,
+                            &action,
+                            &parameters,
+                            &settings,
+                            credential_revision,
+                        )?),
+                        Some(ControlGesture::HoldStart) => {
+                            self.invocations.acquire().filter(|_| {
+                                self.holds.reserve(
+                                    control.as_ref().expect("matched control").control.clone(),
+                                    &action,
+                                    &parameters,
+                                    &settings,
+                                    credential_revision,
+                                    credentials.clone(),
+                                )
+                            })
+                        }
+                        _ => self.invocations.acquire(),
+                    };
+                    match permit {
                         Some(permit) => {
                             let reply = Reply::new(
                                 self.writer.clone(),
@@ -207,6 +246,8 @@ impl<P: Plugin> Session<P> {
                             guarded(|| {
                                 self.plugin.invoke(
                                     Invoke {
+                                        settings,
+                                        control,
                                         action,
                                         parameters,
                                         credentials,
@@ -226,12 +267,17 @@ impl<P: Plugin> Session<P> {
                     }
                 }
                 Message::Options {
+                    settings,
                     scope,
                     definition,
                     field,
                     context,
                     credential_revision,
-                } if self.api >= 2 => {
+                } if rad_plugin_contract::supports(
+                    &self.capabilities,
+                    rad_plugin_contract::DYNAMIC_OPTIONS,
+                ) =>
+                {
                     let credentials = self.credentials.acquire(credential_revision)?;
                     match self.queries.acquire() {
                         Some(permit) => {
@@ -242,6 +288,7 @@ impl<P: Plugin> Session<P> {
                                 credentials.clone(),
                             );
                             let query = OptionsQuery {
+                                settings,
                                 credentials,
                                 scope,
                                 definition,
@@ -259,6 +306,7 @@ impl<P: Plugin> Session<P> {
                     }
                 }
                 Message::Subscribe {
+                    settings,
                     source,
                     parameters,
                     credential_revision,
@@ -269,6 +317,7 @@ impl<P: Plugin> Session<P> {
                         correlation,
                         source,
                         parameters,
+                        settings,
                         credentials,
                     );
                     match self.subscriptions.insert(&subscription) {
@@ -301,15 +350,11 @@ fn next_envelope(input: &mut impl Read) -> Result<Option<Envelope>, Error> {
         return Ok(None);
     };
     let payload = zeroize::Zeroizing::new(payload);
-    crate::json::validate(&payload).map_err(|_| Error::Protocol("invalid message"))?;
-    let envelope: Envelope =
-        serde_json::from_slice(&payload).map_err(|_| Error::Protocol("invalid message"))?;
-    if envelope.protocol != PROTOCOL {
-        return Err(Error::Protocol("unsupported protocol version"));
-    }
-    if envelope.correlation.generation == 0 || envelope.correlation.request == 0 {
-        return Err(Error::Protocol("correlation ids must be positive"));
-    }
+    let mut framed = zeroize::Zeroizing::new((payload.len() as u32).to_be_bytes().to_vec());
+    framed.extend_from_slice(&payload);
+    let (envelope, _) = rad_plugin_contract::decode(&framed)
+        .map_err(|_| Error::Protocol("invalid message"))?
+        .ok_or(Error::Protocol("incomplete message"))?;
     Ok(Some(envelope))
 }
 
@@ -318,29 +363,47 @@ fn handshake(
     config: &Config,
     input: &mut impl Read,
     writer: &Writer,
-) -> Result<Option<(u64, u32)>, Error> {
+) -> Result<Option<(u64, Vec<String>)>, Error> {
     let Some(envelope) = next_envelope(input)? else {
         return Ok(None);
     };
-    let Message::Hello { host_api, .. } = envelope.message else {
+    let Message::Hello {
+        host_api,
+        capabilities,
+        plugin_id,
+        plugin_version,
+        target,
+    } = envelope.message
+    else {
         return Err(Error::Protocol("expected hello"));
     };
     if envelope.correlation.request != 1 {
         return Err(Error::Protocol("hello must use request 1"));
     }
-    if !config.host_api.contains(&host_api) {
+    if host_api != rad_plugin_contract::HOST_API || !config.host_api.contains(&host_api) {
         return Err(Error::IncompatibleHost {
             requested: host_api,
             min: *config.host_api.start(),
             max: *config.host_api.end(),
         });
     }
+    if plugin_id != config.id
+        || plugin_version != config.version
+        || target != "x86_64-unknown-linux-gnu"
+    {
+        return Err(Error::Protocol("hello identity or target mismatch"));
+    }
+    let capabilities =
+        rad_plugin_contract::negotiate_capabilities(&capabilities, &config.capabilities)
+            .map_err(|_| Error::Protocol("invalid capabilities"))?;
+    writer.negotiate(capabilities.clone());
     writer.send(
         envelope.correlation,
         Message::Ready {
+            capabilities: capabilities.clone(),
             plugin_id: config.id.clone(),
             plugin_version: config.version,
         },
     )?;
-    Ok(Some((envelope.correlation.generation, host_api)))
+    Ok(Some((envelope.correlation.generation, capabilities)))
 }

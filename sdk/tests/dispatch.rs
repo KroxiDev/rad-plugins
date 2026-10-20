@@ -72,8 +72,8 @@ fn wait() -> Duration {
 #[test]
 fn an_invoke_reaches_the_plugin_and_is_answered_later_from_another_thread() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     invoke(&mut host, 2);
     let (call, reply) = probe.invokes.recv_timeout(wait()).unwrap();
     assert_eq!(call.action, "go");
@@ -111,8 +111,8 @@ fn an_invoke_reaches_the_plugin_and_is_answered_later_from_another_thread() {
 #[test]
 fn outcomes_and_choice_lists_have_the_documented_json_shape() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     invoke(&mut host, 2);
     probe
         .invokes
@@ -170,8 +170,8 @@ fn outcomes_and_choice_lists_have_the_documented_json_shape() {
 #[test]
 fn a_choice_list_the_host_would_reject_is_replaced_by_unavailable() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     let invalid: Vec<Vec<ChoiceOption>> = vec![
         (0..65).map(option).collect(),
         vec![option(1), option(1)],
@@ -209,8 +209,8 @@ fn a_choice_list_the_host_would_reject_is_replaced_by_unavailable() {
 #[test]
 fn a_choice_list_too_big_for_one_frame_is_answered_unavailable_not_lost() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     query(&mut host, 2);
     let options: Vec<ChoiceOption> = (0..64)
         .map(|n| ChoiceOption {
@@ -232,8 +232,8 @@ fn a_choice_list_too_big_for_one_frame_is_answered_unavailable_not_lost() {
 #[test]
 fn the_seventeenth_concurrent_action_is_busy_and_is_never_queued() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     let mut held = Vec::new();
     for request in 2..18 {
         invoke(&mut host, request);
@@ -271,10 +271,10 @@ fn the_seventeenth_concurrent_action_is_busy_and_is_never_queued() {
 #[test]
 fn option_queries_have_their_own_cap_and_are_answered_unavailable_beyond_it() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     let mut held = Vec::new();
-    for request in 2..6 {
+    for request in 2..4 {
         query(&mut host, request);
         held.push(probe.queries.recv_timeout(wait()).unwrap().1);
     }
@@ -302,8 +302,8 @@ fn option_queries_have_their_own_cap_and_are_answered_unavailable_beyond_it() {
 #[test]
 fn a_reply_dropped_without_an_answer_still_answers_and_frees_its_slot() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     for round in 0..20u64 {
         // 20 rounds exceed the cap of 16, so a leaked slot would turn into `busy`.
         invoke(&mut host, 2 + round);
@@ -346,12 +346,12 @@ impl Plugin for Panicky {
 #[test]
 fn a_panicking_handler_fails_its_own_request_and_the_loop_keeps_serving() {
     let mut host = Host::start(
-        config(2..=2),
+        config(1..=1),
         Panicky {
             calls: AtomicUsize::new(0),
         },
     );
-    host.handshake(2);
+    host.handshake(1);
     invoke(&mut host, 2);
     assert_eq!(
         host.recv()["message"]["outcome"],
@@ -368,8 +368,8 @@ fn a_panicking_handler_fails_its_own_request_and_the_loop_keeps_serving() {
 #[test]
 fn frames_written_from_several_threads_never_interleave() {
     let (plugin, probe) = handoff();
-    let mut host = Host::start(config(2..=2), plugin);
-    host.handshake(2);
+    let mut host = Host::start(config(1..=1), plugin);
+    host.handshake(1);
     let big: Vec<ChoiceOption> = (0..64)
         .map(|n| ChoiceOption {
             value: format!("{n:03}{}", "v".repeat(200)),
@@ -381,17 +381,17 @@ fn frames_written_from_several_threads_never_interleave() {
     })
     .unwrap();
     let counter = Mutex::new(0u64);
-    for round in 0..5u64 {
+    for round in 0..10u64 {
         let mut threads = Vec::new();
-        for n in 0..4u64 {
-            query(&mut host, 2 + round * 4 + n);
+        for n in 0..2u64 {
+            query(&mut host, 2 + round * 2 + n);
             let (_, reply) = probe.queries.recv_timeout(wait()).unwrap();
             let list = ChoiceList::Available {
                 options: big.clone(),
             };
             threads.push(std::thread::spawn(move || reply.send(list)));
         }
-        for _ in 0..4 {
+        for _ in 0..2 {
             let frame = host.recv();
             assert_eq!(frame["message"]["list"], expected);
             *counter.lock().unwrap() += 1;
@@ -402,4 +402,135 @@ fn frames_written_from_several_threads_never_interleave() {
     }
     assert_eq!(*counter.lock().unwrap(), 20);
     host.finish().unwrap();
+}
+
+fn controls_host(plugin: Handoff) -> Host {
+    let mut host = Host::start(config(1..=1).capabilities(vec!["controls".into()]), plugin);
+    host.send(1, json!({"kind":"hello","capabilities":["controls"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}));
+    assert_eq!(host.recv()["message"]["kind"], "ready");
+    host
+}
+fn hold(host: &mut Host, request: u64, gesture: &str) {
+    host.send(request, json!({"kind":"invoke","action":"hold","parameters":parameters(json!({})),"control":{"control":{"kind":"button","index":0},"gesture":gesture}}));
+}
+#[test]
+fn hold_end_uses_reserved_credit_when_every_ordinary_slot_is_occupied() {
+    let (plugin, probe) = handoff();
+    let mut host = controls_host(plugin);
+    hold(&mut host, 2, "hold_start");
+    let start = probe.invokes.recv_timeout(wait()).unwrap();
+    let mut ordinary = vec![start];
+    for request in 3..18 {
+        invoke(&mut host, request);
+        ordinary.push(probe.invokes.recv_timeout(wait()).unwrap());
+    }
+    hold(&mut host, 18, "hold_end");
+    let end = probe.invokes.recv_timeout(Duration::from_millis(200));
+    assert!(
+        end.is_ok(),
+        "release must reach plugin even when 16 ordinary replies are retained"
+    );
+    let (call, reply) = end.unwrap();
+    assert_eq!(
+        call.control.unwrap().gesture,
+        rad_plugin_sdk::ControlGesture::HoldEnd
+    );
+    reply.send(Outcome::Success);
+    assert_eq!(host.recv()["message"]["outcome"]["status"], "success");
+    drop(ordinary);
+    host.finish().unwrap();
+}
+
+#[test]
+fn identical_holds_pair_fifo_and_an_extra_end_is_protocol_error() {
+    let (plugin, probe) = handoff();
+    let mut host = controls_host(plugin);
+    for request in 2..4 {
+        hold(&mut host, request, "hold_start");
+        probe
+            .invokes
+            .recv_timeout(wait())
+            .unwrap()
+            .1
+            .send(Outcome::Success);
+        host.recv();
+    }
+    for request in 4..6 {
+        hold(&mut host, request, "hold_end");
+        probe
+            .invokes
+            .recv_timeout(wait())
+            .unwrap()
+            .1
+            .send(Outcome::Success);
+        host.recv();
+    }
+    hold(&mut host, 6, "hold_end");
+    assert!(
+        host.finish().is_err(),
+        "double End must never reach handler"
+    );
+    assert!(probe.invokes.try_recv().is_err());
+}
+#[test]
+fn unknown_hold_end_never_reaches_plugin() {
+    let (plugin, probe) = handoff();
+    let mut host = controls_host(plugin);
+    hold(&mut host, 2, "hold_end");
+    assert!(host.finish().is_err());
+    assert!(probe.invokes.try_recv().is_err());
+}
+#[test]
+fn hold_credits_remain_bounded_after_start_replies() {
+    let (plugin, probe) = handoff();
+    let mut host = controls_host(plugin);
+    for request in 2..34 {
+        hold(&mut host, request, "hold_start");
+        probe
+            .invokes
+            .recv_timeout(wait())
+            .unwrap()
+            .1
+            .send(Outcome::Success);
+        host.recv();
+    }
+    hold(&mut host, 34, "hold_start");
+    assert_eq!(host.recv()["message"]["outcome"]["code"], "busy");
+    assert!(probe.invokes.try_recv().is_err());
+    hold(&mut host, 35, "hold_end");
+    let end = probe.invokes.recv_timeout(wait()).unwrap();
+    // End in flight still owns its reserved credit.
+    hold(&mut host, 36, "hold_start");
+    assert_eq!(host.recv()["message"]["outcome"]["code"], "busy");
+    end.1.send(Outcome::Success);
+    host.recv();
+    hold(&mut host, 37, "hold_start");
+    probe
+        .invokes
+        .recv_timeout(wait())
+        .unwrap()
+        .1
+        .send(Outcome::Success);
+    host.recv();
+    host.finish().unwrap();
+}
+
+#[test]
+fn end_with_changed_parameters_does_not_consume_the_reserved_start() {
+    let (plugin, probe) = handoff();
+    let mut host = controls_host(plugin);
+    hold(&mut host, 2, "hold_start");
+    probe
+        .invokes
+        .recv_timeout(wait())
+        .unwrap()
+        .1
+        .send(Outcome::Success);
+    host.recv();
+    host.send(3, json!({"kind":"invoke","action":"hold","parameters":parameters(json!({"changed":true})),"control":{"control":{"kind":"button","index":0},"gesture":"hold_end"}}));
+    assert!(
+        host.finish().is_err(),
+        "release must match original snapshot"
+    );
+    assert!(probe.invokes.try_recv().is_err());
 }

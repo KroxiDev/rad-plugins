@@ -19,6 +19,7 @@ pub struct Timing {
     pub(crate) max_settle: Duration,
     pub(crate) retry_wait: Duration,
     pub(crate) retry_max: Duration,
+    pub(crate) recheck: Duration,
 }
 
 impl Default for Timing {
@@ -31,11 +32,17 @@ impl Default for Timing {
             max_settle: Duration::from_millis(250),
             retry_wait: Duration::from_millis(1000),
             retry_max: Duration::from_millis(30_000),
+            recheck: Duration::from_secs(10),
         }
     }
 }
 
 impl Timing {
+    /// Re-observe healthy sources even without events; only that observation renews visuals.
+    pub fn recheck(mut self, interval: Duration) -> Self {
+        self.recheck = interval.clamp(Duration::from_millis(1), Duration::from_secs(10));
+        self
+    }
     /// Longest an action may take in total, `pactl` runs included (3 s by default). The host
     /// gives up at 5 s, so this stays below it and a hung `pactl` is killed and reported before
     /// that.

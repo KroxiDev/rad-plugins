@@ -8,7 +8,7 @@ use support::*;
 fn secs(n: u64) -> Duration {
     Duration::from_secs(n)
 }
-/// A change must reach the host within one heartbeat (the SDK's is at most 500 ms).
+/// The integration's latency budget for a source change (not an SDK heartbeat).
 const HEARTBEAT: Duration = Duration::from_millis(500);
 
 #[test]
@@ -18,22 +18,23 @@ fn a_subscription_shows_muted_or_on_with_a_colour() {
     let mut host = Host::start(&server, quick());
     let output = host.subscribe("output", "@default");
     let microphone = host.subscribe("microphone", "@default");
-    assert_eq!(
-        host.next_visual(output, secs(5)),
-        Some(("current".into(), Some("On".into())))
-    );
-    assert_eq!(
-        host.next_visual(microphone, secs(5)),
-        Some(("current".into(), Some("Muted".into())))
-    );
-    host.discard_pending();
-    // Both visuals keep repeating their state, with a colour that tells them apart.
-    let on = host.next_visual_colour(output, secs(5)).unwrap().1.unwrap();
-    let muted = host
-        .next_visual_colour(microphone, secs(5))
-        .unwrap()
-        .1
-        .unwrap();
+    let mut colours = Vec::new();
+    for (subscription, text) in [(output, "On"), (microphone, "Muted")] {
+        let frame = host
+            .take(
+                |f| f["correlation"]["request"] == subscription && f["message"]["kind"] == "visual",
+                secs(5),
+            )
+            .expect("initial visual");
+        let state = &frame["message"]["state"];
+        assert_eq!(state["availability"], "current");
+        assert_eq!(state["content"]["text"], text);
+        let colour = state["content"]["color"].as_array().expect("colour");
+        colours.push([0, 1, 2, 3].map(|i| colour[i].as_u64().unwrap()));
+    }
+    let [on, muted] = colours.as_slice() else {
+        panic!("both colours")
+    };
     assert!(on[1] > on[0], "on is greenish: {on:?}");
     assert!(muted[0] > muted[1], "muted is reddish: {muted:?}");
     assert_eq!((on[3], muted[3]), (255, 255));
@@ -202,7 +203,7 @@ fn the_monitor_exists_only_while_something_is_subscribed() {
 }
 
 #[test]
-fn while_nothing_changes_the_heartbeat_runs_no_process() {
+fn between_observations_there_is_no_blind_renewal_or_process() {
     let server = FakeServer::new();
     let mut host = Host::start(&server, quick());
     let output = host.subscribe("output", "@default");
@@ -210,16 +211,17 @@ fn while_nothing_changes_the_heartbeat_runs_no_process() {
         .unwrap();
     std::thread::sleep(Duration::from_millis(100));
     let calls = server.calls().len();
-    // Three heartbeats pass; the host keeps receiving the state, the system sees no command.
-    let mut repeats = 0;
-    while host
-        .next_visual(output, Duration::from_millis(1400))
-        .is_some()
-        && repeats < 3
-    {
-        repeats += 1;
-    }
-    assert_eq!(repeats, 3, "the state is repeated every heartbeat");
+    // A live SDK is not evidence that the source was observed again.
+    assert!(
+        host.take(
+            |f| matches!(
+                f["message"]["kind"].as_str(),
+                Some("visual" | "visual_renew")
+            ),
+            Duration::from_millis(1400)
+        )
+        .is_none()
+    );
     assert_eq!(
         server.calls().len(),
         calls,
@@ -439,4 +441,46 @@ fn watching_resumed_while_a_refresh_is_stuck_shows_only_fresh_pictures() {
     assert!(eventually(secs(2), || server.live_subscribers() == 1));
     host.finish().unwrap();
     assert!(eventually(secs(2), || server.live_subscribers() == 0));
+}
+
+#[test]
+fn adding_a_subscriber_during_a_blocked_read_does_not_refresh_cached_visuals() {
+    let server = FakeServer::new();
+    let mut host = Host::start(&server, quick().refresh_deadline(secs(3)));
+    let first = host.subscribe("output", "@default");
+    host.wait_visual(first, "current", Some("On"), secs(5))
+        .unwrap();
+    host.discard_pending();
+    server.hang(&["-f json list"]);
+    server.set_mute(Kind::Output, "sink-a", true);
+    assert!(eventually(secs(2), || server.live_hung() == 1));
+    let calls = server.calls();
+    let second = host.subscribe("output", "@default");
+    let unexpected = host.take(
+        |f| {
+            matches!(
+                f["message"]["kind"].as_str(),
+                Some("visual" | "visual_renew")
+            )
+        },
+        Duration::from_millis(300),
+    );
+    let calls_after = server.calls();
+    // Release future reads; the current hung child still reaches its controlled deadline.
+    server.hang(&[]);
+    host.wait_visual(first, "current", Some("Muted"), secs(5))
+        .unwrap();
+    host.wait_visual(second, "current", Some("Muted"), secs(5))
+        .unwrap();
+    host.finish().unwrap();
+    assert_eq!(
+        calls_after, calls,
+        "the reader stayed blocked during the add"
+    );
+    assert!(
+        unexpected.is_none(),
+        "cache asserted fresh without observation: {unexpected:?}"
+    );
+    assert!(eventually(secs(2), || server.live_subscribers() == 0
+        && server.live_hung() == 0));
 }

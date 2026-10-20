@@ -14,12 +14,19 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
     let config = config();
     assert_eq!(manifest["contract"], 1);
     assert_eq!(manifest["id"], config.id);
-    assert_eq!(manifest["version"], json!({"major":0,"minor":1,"patch":0}));
+    assert_eq!(manifest["version"], json!({"major":0,"minor":2,"patch":0}));
     assert_eq!(config.version.major, 0);
-    assert_eq!((config.version.minor, config.version.patch), (1, 0));
+    assert_eq!((config.version.minor, config.version.patch), (2, 0));
     assert_eq!(manifest["host_min"], *config.host_api.start());
     assert_eq!(manifest["host_max"], *config.host_api.end());
-    assert_eq!(manifest["host_min"], 2, "dynamic_choice needs host API 2");
+    assert_eq!(manifest["host_min"], 1);
+    assert!(
+        manifest["capabilities"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c == "dynamic_options")
+    );
     assert_eq!(manifest["targets"], json!(["x86_64-unknown-linux-gnu"]));
 }
 

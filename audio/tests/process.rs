@@ -52,8 +52,8 @@ impl Process {
     fn hello(&mut self, api: u32) {
         self.send(
             1,
-            json!({"kind":"hello","host_api":api,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":1,"patch":0}}),
+            json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness"],"host_api":api,"target":"x86_64-unknown-linux-gnu",
+                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":2,"patch":0}}),
         );
     }
 
@@ -175,12 +175,12 @@ fn real_plugin() -> Process {
 #[test]
 fn the_real_binary_handshakes_and_reports_everything_unavailable_without_a_server() {
     let mut plugin = real_plugin();
-    plugin.hello(2);
+    plugin.hello(1);
     let ready = plugin.recv().expect("ready");
     assert_eq!(ready["correlation"], json!({"generation":3,"request":1}));
     assert_eq!(
         ready["message"],
-        json!({"kind":"ready","plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":1,"patch":0}})
+        json!({"kind":"ready","capabilities":["dynamic_options","visual_freshness"],"plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":2,"patch":0}})
     );
 
     plugin.send(
@@ -226,7 +226,7 @@ fn the_real_binary_handshakes_and_reports_everything_unavailable_without_a_serve
 #[test]
 fn the_real_binary_refuses_a_host_api_it_does_not_support() {
     let mut plugin = real_plugin();
-    plugin.hello(1);
+    plugin.hello(2);
     assert!(
         plugin.recv().is_none(),
         "no ready for an unsupported host API"
@@ -244,7 +244,7 @@ fn the_event_child_dies_with_the_plugin_even_if_the_plugin_is_killed() {
         .env_clear()
         .env("XDG_RUNTIME_DIR", server.dir());
     let mut plugin = Process::spawn(command);
-    plugin.hello(2);
+    plugin.hello(1);
     assert!(plugin.recv().is_some());
     plugin.send(
         2,

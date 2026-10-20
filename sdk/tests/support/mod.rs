@@ -19,7 +19,12 @@ pub const VERSION: Version = Version {
 };
 
 pub fn config(api: RangeInclusive<u32>) -> Config {
-    Config::new("org.example.probe", VERSION, api)
+    Config::new("org.example.probe", VERSION, api).capabilities(vec![
+        "credentials".into(),
+        "dynamic_options".into(),
+        "jpeg".into(),
+        "visual_freshness".into(),
+    ])
 }
 
 pub struct Host {
@@ -60,7 +65,7 @@ impl Host {
     pub fn hello(&mut self, host_api: u32) {
         self.send(
             1,
-            json!({"kind":"hello","host_api":host_api,"target":"x86_64-unknown-linux-gnu",
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","jpeg","visual_freshness"],"host_api":host_api,"target":"x86_64-unknown-linux-gnu",
                    "plugin_id":"org.example.probe","plugin_version":{"major":0,"minor":3,"patch":1}}),
         );
     }

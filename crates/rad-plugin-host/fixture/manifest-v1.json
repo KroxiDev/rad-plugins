@@ -1,0 +1,73 @@
+{
+  "contract": 1,
+  "id": "org.rad.fixture",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "host_min": 1,
+  "host_max": 1,
+  "targets": [
+    "x86_64-unknown-linux-gnu"
+  ],
+  "actions": [
+    {
+      "id": "run",
+      "label": "Run",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "mode",
+            "label": "Mode",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "echo",
+                "fail",
+                "slow",
+                "crash",
+                "late",
+                "flood"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ],
+  "visuals": [
+    {
+      "id": "status",
+      "label": "Status",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "mode",
+            "label": "Mode",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                "echo",
+                "fail",
+                "slow",
+                "crash",
+                "late",
+                "flood"
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": []
+    }
+  ],
+  "capabilities": [
+    "visual_freshness"
+  ]
+}

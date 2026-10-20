@@ -114,6 +114,11 @@ impl Monitor {
         Some(state.epoch)
     }
 
+    /// Coalesces a request for a new observation with pending source events.
+    pub(crate) fn refresh(&self) {
+        self.shared.control.event();
+    }
+
     /// Asks the thread to wind down: it ends its event child and exits unless watching is wanted
     /// again by then.
     pub(crate) fn stop(&self) {
@@ -407,7 +412,7 @@ fn follow(
             let wait = backoff.next();
             retry = Some((Instant::now() + wait, wait));
         }
-        retry_at = retry.map(|(at, _)| at);
+        retry_at = Some(retry.map_or_else(|| Instant::now() + timing.recheck, |(at, _)| at));
         publish(picture);
         // Only now: a picture whose publication panics does not make this a good session.
         if worked {

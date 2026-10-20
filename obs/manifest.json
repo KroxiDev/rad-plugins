@@ -3,11 +3,11 @@
   "id": "org.rad.obs",
   "version": {
     "major": 0,
-    "minor": 1,
-    "patch": 1
+    "minor": 2,
+    "patch": 0
   },
-  "host_min": 3,
-  "host_max": 3,
+  "host_min": 1,
+  "host_max": 1,
   "targets": [
     "x86_64-unknown-linux-gnu"
   ],
@@ -31,6 +31,9 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "gestures": [
+        "press"
       ]
     },
     {
@@ -76,6 +79,9 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "gestures": [
+        "press"
       ]
     },
     {
@@ -120,6 +126,9 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "gestures": [
+        "press"
       ]
     },
     {
@@ -146,6 +155,9 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "gestures": [
+        "press"
       ]
     },
     {
@@ -170,6 +182,9 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "gestures": [
+        "press"
       ]
     },
     {
@@ -196,7 +211,10 @@
       "response_timeout": {
         "field": "timeout_seconds",
         "default_seconds": 30
-      }
+      },
+      "gestures": [
+        "press"
+      ]
     }
   ],
   "visuals": [
@@ -307,5 +325,27 @@
         "password"
       ]
     }
-  ]
+  ],
+  "capabilities": [
+    "credentials",
+    "dynamic_options",
+    "response_timeout",
+    "visual_freshness",
+    "settings"
+  ],
+  "settings": {
+    "version": 1,
+    "fields": [
+      {
+        "id": "port",
+        "label": "WebSocket port",
+        "required": false,
+        "kind": {
+          "type": "integer",
+          "min": 1,
+          "max": 65535
+        }
+      }
+    ]
+  }
 }
