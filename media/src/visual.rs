@@ -96,6 +96,7 @@ impl Reader {
             Status::Stopped => ("Stopped", STOPPED),
         };
         VisualContent {
+            state: None,
             text: Some(text.into()),
             color: Some(color),
             ..VisualContent::default()
@@ -124,13 +125,28 @@ impl Reader {
 
 #[cfg(test)]
 mod tests {
+    mod fault_probe {
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../scripts/performance/fault_probe.rs"
+        ));
+    }
     use super::*;
     use std::{sync::mpsc, time::Duration};
 
     #[test]
     fn a_reader_without_cover_does_not_wait_for_busy_conversion() {
+        let mut profile =
+            fault_probe::Probe::begin("stalled_converter", "wall_monotonic_no_bus_or_decode");
+        if let Some(p) = &mut profile {
+            p.snapshot("before");
+        }
         // The receiver stays alive but never accepts a conversion: sending to it would block.
         let (converter, stalled) = cover::Converter::stalled();
+        if let Some(p) = &mut profile {
+            p.snapshot("during");
+        }
+        let profile_answer = Instant::now();
         let (done, result) = mpsc::channel();
         let handle = std::thread::spawn(move || {
             let mut reader = Reader::new("text-player".into(), Arc::new(converter));
@@ -141,8 +157,17 @@ mod tests {
             .unwrap();
         });
         let result = result.recv_timeout(Duration::from_secs(2));
+        if let Some(p) = &mut profile {
+            p.sample(
+                "text_reader_thread_answer",
+                profile_answer.elapsed().as_nanos(),
+            );
+        }
         drop(stalled); // Release a regressed sender before joining, even when the assertion fails.
         handle.join().unwrap();
+        if let Some(p) = &mut profile {
+            p.snapshot("after");
+        }
         assert_eq!(
             result
                 .expect("text reader waited for cover conversion")

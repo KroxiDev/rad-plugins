@@ -1,5 +1,6 @@
 [
   {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"visual","valid_for_ms":1000,"state":{"availability":"unavailable","unexpected":true}}},
   {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"choices","list":{"availability":"unavailable","unexpected":true}}},
-  {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"result","outcome":{"status":"success","unexpected":true}}}
+  {"protocol":1,"correlation":{"generation":1,"request":2},"message":{"kind":"result","outcome":{"status":"success","unexpected":true}}},
+  {"protocol":1,"correlation":{"generation":7,"request":2},"message":{"kind":"visual","valid_for_ms":25000,"state":{"availability":"current","content":{"state":"BAD STATE","text":null,"png_hex":null,"color":null}}}}
 ]

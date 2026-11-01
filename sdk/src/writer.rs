@@ -24,6 +24,13 @@ impl Writer {
     pub(crate) fn negotiate(&self, capabilities: Vec<String>) {
         *self.1.lock().unwrap_or_else(PoisonError::into_inner) = Some(capabilities);
     }
+    pub(crate) fn supports(&self, capability: &str) -> bool {
+        self.1
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+            .is_some_and(|caps| rad_plugin_contract::supports(caps, capability))
+    }
     pub(crate) fn send(&self, correlation: Correlation, message: Message) -> Result<(), Error> {
         if self
             .1

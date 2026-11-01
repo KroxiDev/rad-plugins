@@ -29,7 +29,7 @@ impl Catalog {
                     .text("source")
                     .ok_or(FailureCode::InvalidParameters)?,
             )?),
-            "source" | "scene" => None,
+            "source" | "scene" | "input" => None,
             _ => return Err(FailureCode::InvalidParameters),
         };
         Ok(Self {
@@ -84,6 +84,7 @@ impl Catalog {
             }
             match self.field.as_str() {
                 "scene" => self.push("GetSceneList", json!({}), 0),
+                "input" => self.push("GetInputList", json!({}), 0),
                 "source" => {
                     self.push("GetInputList", json!({}), 0);
                     self.push("GetSceneList", json!({}), 0);
@@ -130,7 +131,12 @@ impl Catalog {
                         item: Some(id),
                         source: Some(source.into()),
                     },
-                    format!("{container} / {source} [{id}]"),
+                    // A group's children say which group; an item of the scene is its source.
+                    if q.name == "GetGroupSceneItemList" {
+                        format!("{container} / {source}")
+                    } else {
+                        source.into()
+                    },
                 )?;
                 if item["isGroup"] == true {
                     if q.depth >= 16 || !self.groups.insert(source.into()) {
@@ -171,20 +177,28 @@ impl Catalog {
                         item: None,
                         source: None,
                     },
-                    format!("{name} ({kind})"),
+                    // OBS names are unique across inputs, scenes and groups.
+                    name.into(),
                 )?;
             }
         }
         Ok(())
     }
     pub fn result(&self) -> ChoiceList {
-        if self.queue.is_empty() {
-            ChoiceList::Available {
-                options: self.options.clone(),
-            }
-        } else {
-            ChoiceList::Unavailable
+        if !self.queue.is_empty() {
+            return ChoiceList::Unavailable;
         }
+        // The same source added twice to a scene: only its number tells the two apart.
+        let repeated = |label: &str| self.options.iter().filter(|o| o.label == label).count() > 1;
+        let mut options = self.options.clone();
+        for option in &mut options {
+            if repeated(&option.label)
+                && let Ok(Target { item: Some(id), .. }) = target(&option.value)
+            {
+                option.label = format!("{} [{id}]", option.label);
+            }
+        }
+        ChoiceList::Available { options }
     }
 }
 #[cfg(test)]
@@ -209,6 +223,46 @@ mod tests {
                 .collect();
             assert!(c.accept(json!({"scenes":scenes})).is_err());
         }
+    }
+    #[test]
+    fn labels_are_plain_names_and_number_only_repeated_items() {
+        let empty = Parameters {
+            schema_version: 1,
+            values: serde_json::Map::new(),
+        };
+        let mut c = Catalog::new("input", &empty).unwrap();
+        c.accept(json!({"currentSceneCollectionName":"C"})).unwrap();
+        assert_eq!(c.request().unwrap().0, "GetInputList");
+        c.accept(json!({"inputs":[{"inputName":"Mic/Aux"},{"inputName":"Desktop Audio"}]}))
+            .unwrap();
+        let ChoiceList::Available { options } = c.result() else {
+            panic!("missing options")
+        };
+        let labels: Vec<_> = options.iter().map(|o| o.label.as_str()).collect();
+        assert_eq!(labels, ["Mic/Aux", "Desktop Audio"]);
+        assert_eq!(
+            crate::workflow::target(&options[0].value).unwrap().kind,
+            "input"
+        );
+
+        let scene =
+            r#"{"v":1,"collection":"C","kind":"scene","name":"Root","item":null,"source":null}"#;
+        let p = Parameters {
+            schema_version: 1,
+            values: json!({"scene":scene}).as_object().unwrap().clone(),
+        };
+        let mut c = Catalog::new("item", &p).unwrap();
+        c.accept(json!({"currentSceneCollectionName":"C"})).unwrap();
+        c.accept(json!({"sceneItems":[
+            {"sceneItemId":1,"sourceName":"Camera","isGroup":false},
+            {"sceneItemId":2,"sourceName":"Logo","isGroup":false},
+            {"sceneItemId":5,"sourceName":"Logo","isGroup":false}]}))
+            .unwrap();
+        let ChoiceList::Available { options } = c.result() else {
+            panic!("missing options")
+        };
+        let labels: Vec<_> = options.iter().map(|o| o.label.as_str()).collect();
+        assert_eq!(labels, ["Camera", "Logo [2]", "Logo [5]"]);
     }
     #[test]
     fn group_children_are_addressed_inside_group_not_root() {

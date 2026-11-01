@@ -1,6 +1,6 @@
 [package]
 name = "rad-plugin-media"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 publish = false
 license = { workspace = true }
@@ -19,6 +19,9 @@ image = { version = "=0.25.10", default-features = false, features = ["png", "jp
 [dev-dependencies]
 serde_json = { workspace = true }
 
+[features]
+fixture-tests = []
+
 [lib]
 name = "rad_plugin_media"
 path = "src/lib.rs"
@@ -26,3 +29,8 @@ path = "src/lib.rs"
 [[bin]]
 name = "rad-plugin-media"
 path = "src/main.rs"
+
+[[example]]
+name = "held-converter-fixture"
+path = "examples/held-converter-fixture.rs"
+required-features = ["fixture-tests"]

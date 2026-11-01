@@ -3,7 +3,7 @@
   "id": "org.rad.obs",
   "version": {
     "major": 0,
-    "minor": 2,
+    "minor": 4,
     "patch": 0
   },
   "host_min": 1,
@@ -14,13 +14,13 @@
   "actions": [
     {
       "id": "scene",
-      "label": "Change Program scene",
+      "label": "Scene",
       "schema": {
         "version": 1,
         "fields": [
           {
             "id": "scene",
-            "label": "Program scene",
+            "label": "Scene",
             "required": true,
             "kind": {
               "type": "dynamic_choice",
@@ -32,9 +32,247 @@
       "credential_slots": [
         "password"
       ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
       "gestures": [
         "press"
-      ]
+      ],
+      "visual": "scene"
+    },
+    {
+      "id": "record",
+      "label": "Recording",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "start",
+                  "label": "Start"
+                },
+                {
+                  "value": "stop",
+                  "label": "Stop"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "record"
+    },
+    {
+      "id": "pause",
+      "label": "Pause recording",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "pause",
+                  "label": "Pause"
+                },
+                {
+                  "value": "resume",
+                  "label": "Resume"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "pause"
+    },
+    {
+      "id": "stream",
+      "label": "Streaming",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "start",
+                  "label": "Start"
+                },
+                {
+                  "value": "stop",
+                  "label": "Stop"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "stream"
+    },
+    {
+      "id": "mute",
+      "label": "Mute OBS audio",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "input",
+            "label": "Source",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "mute",
+                  "label": "Mute"
+                },
+                {
+                  "value": "unmute",
+                  "label": "Unmute"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "mute"
+    },
+    {
+      "id": "item",
+      "label": "Show or hide source",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          },
+          {
+            "id": "item",
+            "label": "Source",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": [
+                "scene"
+              ]
+            }
+          },
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "show",
+                  "label": "Show"
+                },
+                {
+                  "value": "hide",
+                  "label": "Hide"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "item"
     },
     {
       "id": "filter",
@@ -64,14 +302,23 @@
           },
           {
             "id": "operation",
-            "label": "Operation",
+            "label": "When pressed",
             "required": true,
             "kind": {
               "type": "choice",
               "options": [
-                "on",
-                "off",
-                "toggle"
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "on",
+                  "label": "Turn on"
+                },
+                {
+                  "value": "off",
+                  "label": "Turn off"
+                }
               ]
             }
           }
@@ -80,13 +327,240 @@
       "credential_slots": [
         "password"
       ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
       "gestures": [
         "press"
+      ],
+      "visual": "filter"
+    },
+    {
+      "id": "virtualcam",
+      "label": "Virtual camera",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "start",
+                  "label": "Start"
+                },
+                {
+                  "value": "stop",
+                  "label": "Stop"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "virtualcam"
+    },
+    {
+      "id": "replay",
+      "label": "Replay buffer",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "save",
+                  "label": "Save replay"
+                },
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "start",
+                  "label": "Start"
+                },
+                {
+                  "value": "stop",
+                  "label": "Stop"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "response_timeout": {
+        "default_seconds": 20
+      },
+      "gestures": [
+        "press"
+      ],
+      "visual": "replay"
+    }
+  ],
+  "visuals": [
+    {
+      "id": "scene",
+      "label": "Scene state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "scene",
+            "label": "Scene",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "states": [
+        {
+          "id": "active",
+          "label": "Active",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000033504c5445000000151922161a2219262b151922151822151a221519221c2c3029554e2f665b3477673b8a7554d5ad4dc19f4ab696419a82ff12a0410000000774524e53002ea4e5f456fa0f803c9e000002404944415468deed9a8b7284200c4555dc12101fffffb5551004575a1edeceecd43bd3e9b6ba399284c8ab69acdaae633dbf413debbab639ebc5f8ad62afc07cdbf1dbe5b7a2ed3940bd23b45f1ca2af16f9fc5e1b3a0e53a7f38703b5e5124302d81a010e558b8c8089021cc0b000d6f45840df70b01ec0037800510009390c72fdd1b2bfade47a4586ff94823200a4c602294a05d0341669a63440a9fd6bc205408dc5522900d2b74e4ac74e0d8952a6d9940010da3ee5a6a371ac4800c8485b7f93f6ac4c000cdb8dc3f16452a6b5e6f4bd4400cdd1fcbb0540363d0804985d86630074643841003aa1e6f93a3dfe02106418c0455b8a1d090608b2ee5a0b2e4d4558e06eef68aeaa8b1ac00fa5429de2530a8871c4f93d5307d8fc318937074dcb11862ac0ee6f7976903031d2176a002e9e2a74d0e22e892a80370a58c8771039d4fab11c108c324c40172f3fd5eea462c06e7fdad3720bb5731077b47280b54fa6f46db63c077925a91070d85f1f7cf7d534860308d3470a4b8567df168e317050e53b39b0bffebd58fbef03a7a2f7c1f4666c082b5c1de0c2fe3983aa0097f64da8afea773620623f5ac0b30172cc1b0597013246d9f92e9af346f105414e1d57d7bd93ef07c02720f029943f0994dedc3ef279bf276312089fc606451932112f26a42e25e01743ec724e8ef296739e25b56c006deb6bef0b6b74172096b6492b0c2900194b4cf92900b88b74902ffa16fd937e00df24826f737dfa4ee00bbf590adfeec56f58c3b7dcf18706e0c71ef00737f0474ff0876780c77fbe0171ba1bce6d051d8a0000000049454e44ae426082"
+        },
+        {
+          "id": "inactive",
+          "label": "Inactive",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a0000003c504c5445000000151922161a22151922151922151822151a221519221e222c3a414d535b69616a7995a2b5282d378a96a8596271474f5c7c8898808c9d6d7786eb4259cd0000000774524e53002ea4d8f456fa0dc11ce2000002294944415468deed9aeb9283200c8545b4c40b88f5fddf7555bca0952e2067763bd3f3cb0e1d3e13420c972c5bc5f29c1722810a9ee72c3babe422a97879e89e25ee7e465856b04200546c04f610103d18f2fd2d1bb88089cff123802ab106cc26300115cb722c20c7033816c0b3020b283201d617f0057c014e005575a02a0a0050d346a8215f80546d9494f4035064ff2381bc004d1badc60740e6659a2e488d319b3c0095d39d6f6506aef200d40e5b7fd3ecd9da17b0ff516aed674d1d0590fdf4ab9728805cc3438200fd0ae83100b947b88400f4fcf2b319fa4f00a435215d3425ad2701077938b4a40f536d9a3ad444dbb2babe0378932a86d37726167015309683269981be079892f121851b072963c6701bb07ca5f5d9419a4c9cd537015b15d01c1d346c4dd52d8055650c643b8836d4f8180f3854314f6939686eee96e768c0d2ff329eadaa2c07edd33d1eb0f62f4dc3d4663968f557bc8bf6fec77a63f1d539a4cc1c894c15ca9eacf2b90fc690e69bac8e45270dee2a31ea7ba05e8adaee98e1ee012efa3f47d02dc065ff4b5aa20400528ea2ff25b14602741b5605c70102aaec28178554f1e183ecf075daea1a06402e40e04ba8751118b6d00f5804c297b1f885387c2b01bf1962b673c256fa61db39df2db56000e9abb9e5970a7d00ae89a1281140bb02537f0a00eea27190afe656ba41fee7f3007e48043fe6faf493c0127f580a3feec51f58c38fdcf19706e0d71ef01737f0574ff09767525fff29f7b7ff0131ef1a95877861440000000049454e44ae426082"
+        }
+      ]
+    },
+    {
+      "id": "record",
+      "label": "Recording state",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "states": [
+        {
+          "id": "recording",
+          "label": "Recording",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000033504c5445000000151922161a22151922151922151822151a22231e2715192256303a904550af505cce5b67dd616ded667363353f723a4581136a3d0000000874524e53002ea4d2f456faf912daffdc000001614944415468deedda0992832010055010085bd37affd3cec4aa6cb34468f95652e11f8027c4b0d82875899e8cb1a143ac3193563fe34ce81ae31e9ad79d9b5f89bb5e681b00b157419f0224278d7cfebb3e98008b59df9f008cc37660ed820ed068356181093b42e7318203160b5815c019c00006f059808f2953612e9453f4dd8139f343f2dc15580aff4a59ba0191f8cf50ec0324fe37a903e0899f84fc5ee079fb1582dad7feb6b0016cb6ff2dec01125724c981c855896280ea0092020b57661102a516283260e6eacc2220d7035902786e881700b105880220b5004900e416200b006a0148009416a008006eca2b02f02182ffc8f0d714fe47834f15f0c90e3e5de3171cf892895ff4e1db16fcc60bbe75c46f7ef1db77f801047f84c21f020f38c6e20fe2077c4a38e063c8f8203580017c36002f12bd7f1d0d5c6a74f86229bcdc8b2f58c34beef84b03f06b0ff88b1bf8ab27f8cb33bdafffb8dbd37f019ada40b214aca2a20000000049454e44ae426082"
+        },
+        {
+          "id": "stopped",
+          "label": "Stopped",
+          "icon": "89504e470d0a1a0a0000000d494844520000006000000060040300000010b66a0b00000030504c5445000000151922161a22151922151922151822151a221d222b1519223c424e535c6a717b8b818d9e8995a795a2b57c8798a01d17210000000874524e53002ea4d2f456faf912daffdc000001754944415458c3edd82f4fc3401cc6f15b087e0281c7200981649660907b19bc840a120203fa676cba99982e068d20b39090544f4d33d61d1247e8da85d0f6ee7adf04147d743fbbbbee7a77bf13224d6be7c0abcdf17e5bacb3d9f1acd2ebe6cfb72c9f4f45dec696679da3ac81537b70d3660de44d7408e8a5afc843e98a0d06f6c43603176297814b36e6d5a8313861e04a78300df8d7c01d3dce962f778e2df02732cb22b403c14caeb38c6c801fcbef24a105b8973ff2560fce65211f75c08d8b20716ac0992ce5a9067c96c1bb1904b292c808c655303782b80a121350f4a8dca72218a8c0d400c62a303780890a2cf4c095ca385ae0ab41a805811a445ad05783072db85583672d18a8c1540b866af0fa7b0077090f1abf56fcc7e1a981271f9edefc03c29f285e04f032c31732bc54e2c5982ff77843c15b16df14f9b68b37767e74e08793e6ccd78015c045d3dfd771b0b4bce6c52b2e8f71018e4b7c7e8980af29f04508bf6ac19739b6d74587d9ef7f0174e8a367613ecbea0000000049454e44ae426082"
+        }
+      ]
+    },
+    {
+      "id": "pause",
+      "label": "Pause state",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "states": [
+        {
+          "id": "paused",
+          "label": "Paused",
+          "icon": "89504e470d0a1a0a0000000d494844520000006000000060040300000010b66a0b0000002d504c5445000000151922161a22151922151922151922151921151a22141822151922713a44bf5561ed66732b202bc55864e2277ed40000000974524e53002ea4d2f44febfa7f861745b1000000ec4944415458c3ed983d0ac240108537887d2ac1da463b119bd45676b9828587f0181a4147d05ef008398159ec3d82e021dc249623ee570816f3ba07f3ed4ff7de3817940ca6f255b349eadeea6612a5226fe793c8f940b477f4245acbe641ab786097b20b441601c8085084170952ee3a0c18bb3e03d66ec4800dfb73fd6b0ccc19b075026540d0a1acce9f9c061c9fdedfeeba5381930f7ae84e052ef5c855772a50d62395ee54c037d29d010618608001061860c0ff0338fee08085231c0e8938865abad7015c9a7edfe360b5dcf3f28aeb312ee0b8e2f3254242d7147811c2572d789913bb2e1a36e7bf00bec7099ab0f2d3e90000000049454e44ae426082"
+        },
+        {
+          "id": "running",
+          "label": "Running",
+          "icon": "89504e470d0a1a0a0000000d494844520000006000000060040300000010b66a0b0000002a504c5445000000151922161a22151922151922151822151921151a221519224c53607c8798909daf22273195a2b5088597d90000000874524e53002ea4d2f456ebfad80a8d76000000f04944415458c3ed98310ac240104537887d2ab1b7b11451486f63992b780b5b8de22a1ec0c63e20b98060ef158cec5ddc4d2c47dc87d8cdef3ecccbb0a9fe1f63bc92c1c47ed56c9c9ab7ba998d5291b7f349e4bc27da1d3d1bad45b360190fec52b6a05d9111a0f0bfc822e5a6c38091e9336065860c58b33787576360ce808db1500a78ed2fd7d3272701c7cab9fa2e3b113838af527622700e230fd9894015466ad989c02d8c3c652702ae91ec145040010514504001057e057038c1f107072c1ce17048c43154d3bd0ce0d2f4ff1e07abe59697575c8f7101c7159f1f11f099021f42f8a9051f7362cf45d3e6fb2ff8872f532e18d5390000000049454e44ae426082"
+        }
+      ]
+    },
+    {
+      "id": "stream",
+      "label": "Streaming state",
+      "schema": {
+        "version": 1,
+        "fields": []
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "states": [
+        {
+          "id": "live",
+          "label": "Live",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000039504c5445000000151922161a22151922151922151822151a221519221b2a2f2f675b49b59654d4ad419c834cc09d347768213b3b274f4a3a897522403f2aa52ff20000000774524e53002ea4d8f456fa0dc11ce2000002ae4944415468deed9adb7284200c40f1564054a0ffffb19dea764b68122363a6edb479db1de4909b24a0311fd2f5fd30da1b641cfabe33b54c83bd5586094cdfdd3cfd8e28b4e846ab20e393d0bd581579e934d75fe830583519f6f8b18a32e92ab0abd05955e94caf0be8f501832e6030a32e60345659fe017f19e0bc77d249b8b114c0cd21cc42023bd6d0cf84e06500ff3e96221866fe4b008a800396fd91556aa2751fbec801db317f943a39aeb4c21820edc34394c7623c9e4842c04c8e26e558d32c031c3edbaee5d34619e92bc0918b61e550db09005bed002a4fe1ff91d0dbe00ae4f33cadffcfb80a0657c09de7749dbf0e57c1a0b6cc75ce518032bb32ea3b83c69bab73ce91f9bb552aa4134086cb8a4c4e3ff2374265f3096085ab58b89c4b95913c662383e5fc69ece111edb0383288e716d26f2e799f1c191158c019c4059f2b8611e48e500fd9c148821a651630039327f0fcc3a9ef3a45b002387e66012bb02258917bce5fe417d47877c2ca011c5479292d94432119f719e26504304383c592fd14578459f50007a8c697fa240848c810b8221490688087004f03d27702d44da4ee64f53065136dbe21d1f857c57cc3ab42fd6577f6ba5ee1f679fd757db2e1783843c38653a74ab5656e80d7b2659e6cfa00d0b6e9f3654b09682c5bf8c2ab0434165e7ce9f805d0503ab2c52f305163f1cb96efc0c9b07c7f9596ef6c03b2d17598bc01e15a281a90e52d14d70492804b4d20d3c65280c301e155da887baa682700571b71fa2801075c3f4a200f437040c36108d5fa31806bc73954f34a98a8e1408a68bf0927b71ca9d9ab99fca301ce6f0fd9c377f9f8253a961400ca8a0b8ae4585200f08114ff3b00ea262a9c0ce52e27fff4d377f54b22f56baedf7e1338e95f96aa5ff7ea5f58ab5fb9eb7f34a0fed983fe871bfa9f9ee87f3c73f7e73fd3e7eadf004efb10f14e5af9e80000000049454e44ae426082"
+        },
+        {
+          "id": "off",
+          "label": "Off",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a0000003c504c5445000000151922161a22151922151922151822151a221519221e222d48515d272c368b97a995a2b57a8596707a8a535b693239443c434f5a6372626c7b0ec4a8200000000774524e53002ea4d8f456fa0dc11ce2000002c14944415468deed9ae976ac200c8071ab01515cdeff5def8c3a53921216af39b73db7f9372df2910dc2a2d44baaba6edafe06699bbaae1495aee96f95a643dd573777bf233c2daab61790f64da83e7a11f9a824c7efe9d0f462d2ecf1d30b4a27abc0ae42d58b4aa56a59402d0f6864018d6a6501adea85e517f03f03406bc8ed24d6960398c1da219300cfb6a60cf0fcc65a9d07d0cfb6dc68c200186d29c08e5000986c6c506175ed940f7047ff26d7c9e620b85cc05cd8ffe38b833067020e072c25d1be1c6ec8031c065acbf269e5a242312e1b4b337664c242316331e93cc57f378cde2aacc09ace699abf5b580515f480d78ecd691d6ce89200aa009bd39a06ce6edb210538720088473813a1219b602e50c08693de4472eecc5f8327982d0120169fd80c7d6b3b11afc401c788c94fc7c5be232ad0000f003476dc46c6048bd30b107d371c103a0ad8f088b1c160ffefa347608ce2024e5081845fd0143610a722a70f5fdb8f51c080acb8fa238277ff5ed86e286b4cc0cb1800d8c7936fa1cd7ab2f9369ab09721022043f0f5018b04921ff080110f082d296f59024d4e17c600330f7018e078c0fc2f01e226127732e0f6f7876971a24d8589263f55884f7689e9da904aa27cba4e2c381af740161cc85870124ba643bc2b4b6662d147806b8bfe4c3e72282c7dc0c5b2255e78f9004db735798557bc74fc02f01bdabcd21148e8a1e2979ae84af11b2ddf919371f93ee796efd10d88e3ebb0fc0dc8e9bdb50c50b0858a6d025940d126f0b58d9df30185db587e23ce00ce9cd67f7f941006941f25b0872161c085c3106eeb1701941de7709b57de44a50752ccf69b71f29523b5be3493bf3500b43b650fdfe9f52beb583203e0575c5872cedc3200dab2a27f0640dc440f27af41b9cbc9dffdf45dfc9248fc9aeba7df0476f297a5e2d7bdf217d6e257eef28f06c49f3dc83fdc907f7a22ff78e6eee73fdde7e8ff00704e162ff18caf910000000049454e44ae426082"
+        }
+      ]
+    },
+    {
+      "id": "mute",
+      "label": "OBS audio state",
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "id": "input",
+            "label": "Source",
+            "required": true,
+            "kind": {
+              "type": "dynamic_choice",
+              "depends_on": []
+            }
+          }
+        ]
+      },
+      "credential_slots": [
+        "password"
+      ],
+      "states": [
+        {
+          "id": "muted",
+          "label": "Muted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000033504c5445000000151922161a22201d26151922151822151a22151922251e28733a45532f39dd616ded6673d05c68813f4bb3515d8d444fc1a72ee80000000774524e53002ea4e6f456fa1d359370000001be4944415468deed9ae1ae83200c4655dc0a88e0fb3fed9ddbe0a232e316ce92257eff480c475a6881d234516dd7a95e2aa8575dd7366b5d945495ba2cba6f3ba9ae7c146d2f80fa4468af82e8da92ff9f8da1134cdd7dfe08a8792e2912a06e1e10542de981871770806201aae95940df08ac1370024ec087006d8c260176706ed41cc0ba590603f87bffce43001d1c0ad0a34301b37b4980710e054c8fae87c000a27b47ed1140746fd08200a27ba7b8127c316a6c8348f39e7b8d2c01f3b8b2a8b16a1e073ccd3f585901eee0b0fcce1c01dc869a698cee9522207569dc51801edc5641cb06f0f870d0dbc63ec014fa9f96e1cee7a1356486b4479cecb7fd1b29029eabcfa4bf9ae423c060e50520d9a568a05d40989296937bb9d0a2918a06da05f8dd94e357212a140d54052029479432750d804d002b0820c6f182812a019e461ae56701b4897027d3d3f4e38516b28c80840a3cd891e11a4f38ff7b5c2865de92fe94a97ed2e7b72ddfde78f15b477ef3cb6fdff903c8178e50fc21903fc6f20771fe2ae10b9721fc750e7f21755e0a9e8013f02e002f12e165ae5faf045ef862295eeee50bd678c99d7f34803f7be01f6ef04f4ff8c733e0f39f3f59ed0c49223bccf70000000049454e44ae426082"
+        },
+        {
+          "id": "unmuted",
+          "label": "Unmuted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a0000003c504c5445000000151922161a221b2029151922151822151a221519221e222c48505d3338448b97aa95a2b5545c6a6e7888808b9c626b7a7782933d434f5a6372d423c7540000000774524e53002ea4e4f456fab73c5bfb000001bb4944415468deed9ad9928320104559340db2a8c3ffffeb448319943146c3b52a55de67c309bdb0753336890b212b2aa04a0ac1d952b5a4a292f56c785e78f841e92c784500554f02bf1144378efcffc91c24c124c6f821a06aec04eed17af70041c599c002041e20b100c92a2ca06204d605b80017e0204069ad9080c6586b140ea0ed200d03b8717ceb4000e52d14a05a0b050cee4502b4b55040f718daf418c0e4deb671096033e7de0634d1bd5e51025043ce3525003fd1bddd94092ef18afb1c10b3eb91bf1960c47e0488e68fc658986834dc5e80d22e511fddab680920d56f10fe072863737945398028bcb612dbcca84961ee10b7fc58ef01b87c7c4d6b804858d921de04cc627d098804bf17d087a7e6d99a01e222d2ec04b89749e1f2a0e8708087910c104066cd46a5007e2d524b01c2da2fbe06003711dac9e8303d9668fe6f43d85a2afca1a502bed821976bf8867360cb0c7b37fd90a82dbee9e38f2d671fbcf04747fce1177f7cc75f404eb842e12f81f86b2cfe228e7f4a38e13104ff9c837f90ba1e052fc005d80b801789e065ae6faf04d6f86229bcdc8b2f5823bd20ce691a80b73de01b3786c61980fdf999cd33c0f69f5fc8770aaf99ac8ea70000000049454e44ae426082"
+        }
       ]
     },
     {
       "id": "item",
-      "label": "Scene element",
+      "label": "Source state",
       "schema": {
         "version": 1,
         "fields": [
@@ -101,7 +575,7 @@
           },
           {
             "id": "item",
-            "label": "Scene element",
+            "label": "Source",
             "required": true,
             "kind": {
               "type": "dynamic_choice",
@@ -109,134 +583,23 @@
                 "scene"
               ]
             }
-          },
-          {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "show",
-                "hide"
-              ]
-            }
           }
         ]
       },
       "credential_slots": [
         "password"
       ],
-      "gestures": [
-        "press"
-      ]
-    },
-    {
-      "id": "record",
-      "label": "Recording",
-      "schema": {
-        "version": 1,
-        "fields": [
-          {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "start",
-                "stop",
-                "pause",
-                "resume"
-              ]
-            }
-          }
-        ]
-      },
-      "credential_slots": [
-        "password"
-      ],
-      "gestures": [
-        "press"
-      ]
-    },
-    {
-      "id": "stream",
-      "label": "Streaming",
-      "schema": {
-        "version": 1,
-        "fields": [
-          {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "start",
-                "stop"
-              ]
-            }
-          }
-        ]
-      },
-      "credential_slots": [
-        "password"
-      ],
-      "gestures": [
-        "press"
-      ]
-    },
-    {
-      "id": "wait",
-      "label": "Wait for OBS connection",
-      "schema": {
-        "version": 1,
-        "fields": [
-          {
-            "id": "timeout_seconds",
-            "label": "Timeout (seconds; default 30)",
-            "required": false,
-            "kind": {
-              "type": "integer",
-              "min": 1,
-              "max": 120
-            }
-          }
-        ]
-      },
-      "credential_slots": [
-        "password"
-      ],
-      "response_timeout": {
-        "field": "timeout_seconds",
-        "default_seconds": 30
-      },
-      "gestures": [
-        "press"
-      ]
-    }
-  ],
-  "visuals": [
-    {
-      "id": "scene",
-      "label": "Scene state",
-      "schema": {
-        "version": 1,
-        "fields": [
-          {
-            "id": "scene",
-            "label": "Program scene",
-            "required": true,
-            "kind": {
-              "type": "dynamic_choice",
-              "depends_on": []
-            }
-          }
-        ]
-      },
-      "credential_slots": [
-        "password"
+      "states": [
+        {
+          "id": "visible",
+          "label": "Visible",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000036504c5445000000151922161a221a282d151922151822151a221519221b2c30274e492f685c347566419c834dc29e54d4ac47b0913a897522403f61791aee0000000774524e53002ea4e7f456faa589f4150000021d4944415468deed9aeb9283200c8555ec128228bcffcbae5bab558897aac7e9ce989f8cf0c149c070c9b2def2a250a53ec14a55147916db43e9534d3d26cde7853eddc6a3c84b0db07220e43f1a623f39b2ffa331141a66c5337e34d0fe62492101aaf580865a8ef440e705384061012a2bb18032d360bb0137e0067c19800cb3b5cc860000e2cad583b98ae94c00715327d66c636c0090af65739ece00d87ac1ec6180198bd3786fadf79322730840d5bb251bdee5c1be2115ed071837af76183ce3cc5ec0a0bea565e7db5d006a563518146ce87340dffe4480762ab7135910719e3007082ee9be193c5e9964102e7c06e87b66e5781d47272fbb5a0698a412c7538c93ce98ed80973ea361fba5494c6e412509f0aa30721c0ff3a135978ce115102221dbd2be990adfbb23c4042996b2b9f81c7fdc95f8780a367a03210554c9a7266ebff7894909eb80aeaaa31819556d62e64b58bf0660c15d521076a3125cc7cb002384f4b3ccc53d73f277494f32bdda0b16875ea58d71aa6e0c6049471657642fe8e185ee5d0c102532a2447e97443a809d8c0f53fc44c32f15f8c5eec072ed08fcc3a1fdbf4c7bea2f13ffd397d296304d5bc2b1b4454ebc86d4c21f4fbcf0a9233ef9c5a7efe30d489d6e40e8840d087e0b85df043e3de1a0dbd80b36e2f8a3840b0e43ae38ceb98fd46ec00df86a00fc92087ecdf5df6f021ff8cb52f8752ffec21a7ee58e7f34007ff6807fb8817f7a827f3c037cfef30b631418376baed3cd0000000049454e44ae426082"
+        },
+        {
+          "id": "hidden",
+          "label": "Hidden",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000039504c5445000000151922161a221a1e27151922151822151a22151922272c37343a464a525f4f57646e78888c98ab95a2b57a86975b65733a414d808c9d4d50acab0000000774524e53002ea4ebf456faef5f4bad000002204944415468deed9ad9b683200c45516c095305ffff636f0707049caaa7ed5dcb3c5acb0e27093231d6595196bc120758c5cbb260b15db838d4f865d47c518ac32dec45510980553da1b80a885d0ba4ff411f4a01b3f2993f02688f5ce24800bf474040ad4046e01505388063019c555840c504d84ec00938013f0620a9f4dd94240080b4b1b7deac51742840d7b7c46a7514809cbd65cd3a3a02a0279a7f22f46e806f42558cbb9b09f56afc2e0099a1711de82183a0187a1f20edb4da4364ac7c17e03a27dd44f0e77f5f0250bda841af604ddb01d464047894b20a1f78bb44600bed07eefbae96adf149272c6d0374e11df25c8e8ab91ebaa1e743cde6da0ffea4e21ad3332f2f02c8c6dd766915bb58cebc4a6cbafd8612ffedbd94fb5155ad22b0c9f8068921c7c277e190714a37b40690b62feab89c5e8ad56205210598e4559f96eb8be013b7cc32c0a5729ac8ddbe53260d9c5b02a84cb8ec58f0a15736931a6a1ed086d327cf6cec594a9571e83380d60b9d76ca6443357657e7929565048a74d4596d5dea491b3ff54d005c2241e020e3d3145f68f8a1023fd8cd0cd7adc7be1daee9bde11affc1c17f32577df4d59e8ffe8a690bed9bb6e0275e5ba78ecde6a9237ef28b9fbe0702a01620f82554b408b4b945e0d26af9ebcbd80f2cc49f1b15d0ad844f6c867c603be7dc523b0127e0a701f04322f831d77f3f09bce00f4be1c7bdf8036bf8913bfed200fcda03fee206feea09fef20cf0facf1f55cb187fbab4450b0000000049454e44ae426082"
+        }
       ]
     },
     {
@@ -269,69 +632,75 @@
       },
       "credential_slots": [
         "password"
+      ],
+      "states": [
+        {
+          "id": "on",
+          "label": "On",
+          "icon": "89504e470d0a1a0a0000000d494844520000006000000060040300000010b66a0b0000002d504c5445000000151922161a22151922151922151822151921151a221519221a262c2f685c47ad9054d5ad34776828514c648971810000000874524e53002ea4d2f456ebfad80a8d760000015e4944415458c3ed98bf6ec23010c61da1ee992a7616c60a51899da523afd0b760a501e1fe81396a5f80567d8022459d2b726166e00190e0219a9286a4968def93c852fc4d96e55f7c77b6a3bb132295d7684babba2d5ffceaa223590a7ad97a8fb93e25b23d2e255bb7fb0dfa7c60ec631b645b74102048432421f5440d03ae441d0306a289017798cf3f5ec3c00d060c850475f6c0fd5b78183fbf6aa7ff022f343f2c8ae25033ad00efb4c8870f4433cdb402ac29c98713a29566da015503d38832c51b1eb0a65c090b9852a10d07782c011f1ce0a9047c5502984c528267775a099e35acea77ac07a75a6abd1a6a2c4e0fc0261d71da70bdcd613500c683737f8dff006cf3ebf0c90326c5855bb1805d012c59405400310b28bd01aa06804d829d86c30a1f9c7b0fa705e0140e4e12e134d465f746002e9aaaafe3c0d2728417af70790c17e070898f3711e03605dc08c15b2d703387db2ebade7fff1b412b297b19dc1e190000000049454e44ae426082"
+        },
+        {
+          "id": "off",
+          "label": "Off",
+          "icon": "89504e470d0a1a0a0000000d494844520000006000000060040300000010b66a0b00000030504c5445000000151922161a22151922151922151822151a221519221f222d4a525f8c98aa95a2b5555d6c3b424e747f9058606e9302b6a90000000774524e53002ea4d8f456fa0dc11ce2000001614944415458c3636000024625937282c0594980010a58cdcb8902c50110f58c44aa07ea80d821524e3470045b904ebc863201d22c8058614e8a8662601095930402189849d360c0204e9a86420675d2341491aec19c340dc50ceea46928612827118c780d1533dbe1ecce195885513574ed5e0157b47a573b1661340db377ef84312b77ef9e8e45184dc3e9dd7b60cc9addbb8f63111ed5406b0db5af7643c0baebc469f8bd1b06f613a5a17637025c2746431d9286e7c468a842d2b09c261a7039092df0087b1a2df008062bba3904230edda50493067a58505f03c94ec2e3691cc91b77b0e2d08033e2464b8de1a0e1de6a48ecee7a4b9c867a4482fb4e9486db080d7b89d2f01aa1611f511a562334eca28d06929d44b2a7490e5692236e343f505703c94d38921b89243743475bf7383590dc6922b95b46eb9e6229e99d5792bbc72477c049eee2933e8840f23005c90321a40fb5903c9843ec70912ad87c007bfb01a6e6e79a760000000049454e44ae426082"
+        }
       ]
     },
     {
-      "id": "item",
-      "label": "Item state",
-      "schema": {
-        "version": 1,
-        "fields": [
-          {
-            "id": "scene",
-            "label": "Scene",
-            "required": true,
-            "kind": {
-              "type": "dynamic_choice",
-              "depends_on": []
-            }
-          },
-          {
-            "id": "item",
-            "label": "Scene element",
-            "required": true,
-            "kind": {
-              "type": "dynamic_choice",
-              "depends_on": [
-                "scene"
-              ]
-            }
-          }
-        ]
-      },
-      "credential_slots": [
-        "password"
-      ]
-    },
-    {
-      "id": "record",
-      "label": "Record state",
+      "id": "virtualcam",
+      "label": "Virtual camera state",
       "schema": {
         "version": 1,
         "fields": []
       },
       "credential_slots": [
         "password"
+      ],
+      "states": [
+        {
+          "id": "on",
+          "label": "On",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000033504c5445000000151922161a22161d25151922151822151a221519221a292e2f685c264d493477684cc09d54d5ad47ad903a8874419d8442d552040000000774524e53002ea4dbf456fa1f74b30c000001824944415468deed9a7d8f83200cc67973b4a8b0efff6977c1bba91c2a519f2577e9f3c7b218cb8f764c5a8b523fd2c658e76f90b3c66855aab3fe56d96e35bcbe79f88c5878a19d07c8bd09fae1217a68e4fc173e580f93cdebc703d5611dc82e680f9556060b307880c502ac725880531e2c0108400002f8770062a6260005eebfc4f9b3260e5431e3611c231d03288d0d4ae54821e6eb7c08a0616cd240d559f54780d6f1d7d1e0b7d521208dcd4a45749a0034b99ffa5da569c254f9cd8e00e17778abeb2c13c22a3a436c01f0caf76da5ef1533472751df02a8de54d174df1c9d18366c2f019eefe8f0a6ed2540f1a7430162d8b3bd0c1878dff62ce0597924dd0a88ebe88000b1c1560002108000d000e4c30efeb8866f389fdb32a19b3e3c6d399378c1534778f2bb48df7951a315df2fa4eff002c453049750cd8478b208c497b17321bead6b85f8075e25c8eb1c010840000500de2482b7b9fe7a27b0c3374be1ed5e7cc31ade72c71f1a801f7bc01fdcc01f3dc11f9eb9fbf84f37cffe0558d312c47d58907b0000000049454e44ae426082"
+        },
+        {
+          "id": "off",
+          "label": "Off",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000033504c5445000000151922161a221b2029151922151822151a221519221e232d535b6a373e498b98aa95a2b55a63727c8798565f6d747e90cf43fae50000000774524e53002ea4e5f456fa0f803c9e0000017f4944415468deed9adbb283200c45b9592e0af5ffbfb6ad1cb532288cb89d399decc78e618540919830368b0b2195be404a0ac159aa4eea4b25bbcdf0fce2e13ffa9e05571a20b510f84343f4e048ffbfe620354c62da3f1aa80e3b81f76e7daf80868a338105083c40620192292c40310d160108400002fc1cc0586baa00c6d9829cc998d97e187a5306183f54c8a723b930fd6e8b00d70f55ea5dd6ab6709602ac7df4663f5aa08f043b57c129d2a8089cef982a2c326b36625804b27bfb32127829bf74ef42ad400ec66eefbf27f3b668d8e37cf1a40f6a18ce2736b7482dbb16d028c4b74ecae6d1320f9d3a100c11dd99e052cc1efedb1ed59c09839920080e08ab64d805061db041809400002fc00007e54c00f3be4710d7fe1c05f99f7bcf4e1d79633172ff8d5117ef99dafefc7295ac3f51d9e80e053287812884f6363227e9ca2b525e2377c4aa0cf39042000011200bc48042f73fdf74a60872f96c2cbbdf882357215c43d4d03f0b6077ce3c6a77106107f7e67f30cb0fde705e6181135b7ba26b70000000049454e44ae426082"
+        }
       ]
     },
     {
-      "id": "stream",
-      "label": "Stream state",
+      "id": "replay",
+      "label": "Replay buffer state",
       "schema": {
         "version": 1,
         "fields": []
       },
       "credential_slots": [
         "password"
+      ],
+      "states": [
+        {
+          "id": "on",
+          "label": "On",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000036504c5445000000151922161a2219252b151922151822151a221519221b2a2e2f675b49b39454d4ad34776828514b3c8c77419c8322403f4dc19f915a15a90000000774524e53002ea4e3f456fa2aeb6342000002b54944415468deed9adbb2ea200c867b72114ea1bcffcb6eada22d258094ac993db372a7a37c9040083f0c43b0719ae64574b0659ea67188ed368bae36df0ecd8f9d9b7fd87e14e322186c7913c61fc1623f2367ff776398059b4ddbfc118c76e31dc07db6de2320586d1c265ec0c40f987901f3b0f002964130db1fa019005202270094d60a180152df4d3202cc0360a25159834e29e59c916b778045af0fe62a6354050013b5fe62d83e00404d99b21d00d2eb8c215c0480dbf517a5b5eb6aa5711fa8b79700f6dd12da435fd74f58f00240866e9a8427ac0ac18656802c383a842747c80154d1cb2142ae0d50e180e0446c0760611adae7cf642b008b19fc458036803b66f064389e5e524d000f713b298f61ce4979803d7fa512997a9b6ebe0180c9b018220ca6016076e6321317e92194d741c27cec6f3839f41ae09c3c1cb96486ec02d5b55b8d257d94295b4a8338fcc1533ea20b2f13d9097998b048cda3fad231111619f9d4f506ec26ec4aa58b6b805d79b97dec0ff878c91329b51b40f1003e2eda002b5f907900324ed97d5d74dc197477009ef3a9ef384de3bada765e68a75acf50f9ba09e0657a5b969d00895a0fc8daa80160c85a56f400a4ca16019eac8cea013253aa1aba7aa40171294a968e6100f89d1872161368f90233e5ef90f588ab729ecdd5f97900510ea61ce4e14bc0f36fba7cd27e5538f26b41caea2ac2ab7dd7a07899c2e168df3ead2de5d60196d582d741dd439b66e70a92479049fcda2a0a86330126f3435013b27245215520a90dc15ba1ca6b7b435506dafa89728520aea1aa3ca89793ddb190f74a299f3dec3464d39c2255d4a3ead2b554adcd57ef0727d1f11edb3ad9b17ec3b1c6a9772422fdab9f380eb0c2778af3dffd4119c07e49c47ecdf5bfdf04def82f4bd9af7bf92fac39a330fdcea301f6670ffc0f371e0f6718fc3ffee6e319c6e73fff00ebad0ef57eb7080e0000000049454e44ae426082"
+        },
+        {
+          "id": "off",
+          "label": "Off",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a0000003f504c5445000000151922161a22151922151922151822151a221519221e222c48505d818d9e95a2b5535b6a272c373c4350636c7b6d77877a85965a63728b98aa353b46079f05d40000000774524e53002ea4d8f456fa0dc11ce2000002cf4944415468deed9adb96a4200c45bdb6808040f8ff6f9d1a4b4b05b91492879e35e7aded5a6c12208440d3ec6abbae1fa60a1afaae6b1b57633f55553f5e9a6f2b37bf224e56b4c384a0e143687f2614fdb498fd3fd9d04f68ead7f933216ac4356035a19d50d5361d2ea0c307f4b880be197001433321eb3fa0184028259800c2e6991144009d5fa28800fe17c0afdf84e48bd25a2b65a8a80e900bcc17a9cc31ca0210e3b4be316c1d00317348da560050982352e42140a8537f0d9556084bb93aa0201f01eca725252f7d15c7b0980700ba77d3dc7842ea9d5d0cd8db5f028ede87471702b61e4278aa1095b42106c899279b914b394025a6a17cff8c96025432826f045106d0d7087e3be96974a0e300206e3b77ce363127c501d6ffc46e7cb14e3728002cb7c3c2bd5fdbc0f724c0f0938ea0a43d2354d884f43ab811b8fe16eb67590de0af3e155c324d7481468cb0fe62802fd39684ae511adc49974ebc8c23eded97c2f5117f943ade0c0b757caa6a034e63bdce23561d704a2fd73feb030e2f4120a45603301cc0e1228d02382d68140075575a5dc035a8ae9f484d80f1e329549ca66eb22443fb7221c04b964c284b2d0280bfc1b3d0be5f02f0b7cc6d4b2375003c94b9e8a90680dda67010cc8cf2013492e5f2a087220037150da68eaf7f41981d04f8c58470f96289a4bf4dd4232acb79327644880302e9a03345c1cd93f35c04735e4164cb70e8d705a977463bcbbcf65541c5cbcc193608e6ec6cdfac03953ae0bdc6f7ed48106535bb8dc042e758b2240fba8995bc9f09d45d0f098774fba950b11ca50ad7f99f6205134fca9a47310714b5db500a6a586e412719ecc425ab06a619440f3b05d13456915a9285bbac704d03c79125a3f898b91f58e599a1f3ca8ef91b8ee56a3704b4c92e3c7f591c27e2a52ac5f16afa0700e89744e8d75cbffd2670c4bf2c45bfeec5bfb046bf72c77f3480feec01ffe106fed313fcc733b59fff8c47efff0022c011beb5a1712f0000000049454e44ae426082"
+        }
       ]
     }
   ],
   "capabilities": [
     "credentials",
     "dynamic_options",
+    "labels",
     "response_timeout",
     "visual_freshness",
-    "settings"
+    "settings",
+    "visual_states"
   ],
   "settings": {
     "version": 1,
@@ -347,5 +716,54 @@
         }
       }
     ]
+  },
+  "translations": {
+    "es": {
+      "Scene": "Escena",
+      "Recording": "Grabando",
+      "Pause recording": "Pausar grabación",
+      "Streaming": "Transmisión",
+      "Mute OBS audio": "Silenciar audio de OBS",
+      "Show or hide source": "Mostrar u ocultar fuente",
+      "Filter": "Filtro",
+      "Virtual camera": "Cámara virtual",
+      "Replay buffer": "Repetición",
+      "Source": "Fuente",
+      "When pressed": "Al pulsar",
+      "Toggle": "Alternar",
+      "Start": "Iniciar",
+      "Stop": "Detener",
+      "Pause": "Pausar",
+      "Resume": "Reanudar",
+      "Mute": "Silenciar",
+      "Unmute": "Activar sonido",
+      "Show": "Mostrar",
+      "Hide": "Ocultar",
+      "Turn on": "Activar",
+      "Turn off": "Desactivar",
+      "Save replay": "Guardar repetición",
+      "Scene state": "Estado de la escena",
+      "Recording state": "Estado de la grabación",
+      "Pause state": "Estado de la pausa",
+      "Streaming state": "Estado de la transmisión",
+      "OBS audio state": "Estado del audio de OBS",
+      "Source state": "Estado de la fuente",
+      "Filter state": "Estado del filtro",
+      "Virtual camera state": "Estado de la cámara virtual",
+      "Replay buffer state": "Estado de la repetición",
+      "WebSocket port": "Puerto WebSocket",
+      "Active": "Activa",
+      "Inactive": "Inactiva",
+      "Stopped": "Detenida",
+      "Paused": "Pausada",
+      "Running": "En curso",
+      "Live": "En vivo",
+      "Off": "Apagado",
+      "Muted": "Silenciado",
+      "Unmuted": "Con sonido",
+      "Visible": "Visible",
+      "Hidden": "Oculta",
+      "On": "Encendido"
+    }
   }
 }

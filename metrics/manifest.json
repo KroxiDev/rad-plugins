@@ -3,7 +3,7 @@
   "id": "org.rad.metrics",
   "version": {
     "major": 0,
-    "minor": 2,
+    "minor": 3,
     "patch": 0
   },
   "host_min": 1,
@@ -51,6 +51,14 @@
     }
   ],
   "capabilities": [
+    "labels",
     "visual_freshness"
-  ]
+  ],
+  "translations": {
+    "es": {
+      "RAM used / available": "RAM usada / disponible",
+      "NVIDIA GPU utilization": "Uso de GPU NVIDIA",
+      "NVIDIA VRAM used / total": "VRAM NVIDIA usada / total"
+    }
+  }
 }

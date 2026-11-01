@@ -22,6 +22,7 @@ impl Plugin for Probe {
 fn state() -> VisualState {
     VisualState::Current {
         content: VisualContent {
+            state: None,
             text: Some("Paused".into()),
             png_hex: Some("ab".repeat(8192)),
             ..Default::default()

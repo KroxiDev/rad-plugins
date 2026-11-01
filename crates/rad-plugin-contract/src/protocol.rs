@@ -112,6 +112,15 @@ pub struct ChoiceOption {
     pub value: String,
     pub label: String,
 }
+/// A plain fixed option: its value is also the text the user reads.
+impl From<&str> for ChoiceOption {
+    fn from(value: &str) -> Self {
+        Self {
+            value: value.to_owned(),
+            label: value.to_owned(),
+        }
+    }
+}
 impl std::fmt::Debug for ChoiceOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("ChoiceOption([redacted])")
@@ -144,6 +153,8 @@ pub enum VisualState {
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct VisualContent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
     pub text: Option<String>,
     pub png_hex: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -324,11 +335,16 @@ impl VisualContent {
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         }
         // An image is PNG or JPEG, never both.
-        (self.text.is_some()
+        (self.state.is_some()
+            || self.text.is_some()
             || self.png_hex.is_some()
             || self.jpeg_hex.is_some()
             || self.color.is_some())
             && !(self.png_hex.is_some() && self.jpeg_hex.is_some())
+            && self
+                .state
+                .as_deref()
+                .is_none_or(crate::manifest::identifier)
             && self.text.as_ref().is_none_or(|s| crate::manifest::label(s))
             && self.png_hex.as_deref().is_none_or(hex)
             && self.jpeg_hex.as_deref().is_none_or(hex)
@@ -425,7 +441,8 @@ impl Message {
                 has(VISUAL_FRESHNESS)
                     && match state {
                         VisualState::Current { content } | VisualState::Stale { content } => {
-                            content.jpeg_hex.is_none() || has(JPEG)
+                            (content.jpeg_hex.is_none() || has(JPEG))
+                                && (content.state.is_none() || has(crate::VISUAL_STATES))
                         }
                         _ => true,
                     }

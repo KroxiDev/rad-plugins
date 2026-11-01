@@ -57,6 +57,7 @@ fn subscribe(host: &mut Host, request: u64) {
 fn text(text: &str) -> VisualState {
     VisualState::Current {
         content: VisualContent {
+            state: None,
             text: Some(text.into()),
             ..Default::default()
         },
@@ -85,6 +86,7 @@ fn a_subscription_handle_updates_on_the_subscribe_correlation() {
 
     sub.update(VisualState::Current {
         content: VisualContent {
+            state: Some("on".into()),
             text: Some("On".into()),
             color: Some([0, 200, 0, 255]),
             ..Default::default()
@@ -125,14 +127,17 @@ fn a_visual_the_host_would_reject_is_replaced_by_unavailable() {
     let invalid = [
         VisualContent::default(),
         VisualContent {
+            state: None,
             text: Some("".into()),
             ..Default::default()
         },
         VisualContent {
+            state: None,
             text: Some("bell\u{7}".into()),
             ..Default::default()
         },
         VisualContent {
+            state: None,
             text: Some("x".repeat(257)),
             ..Default::default()
         },

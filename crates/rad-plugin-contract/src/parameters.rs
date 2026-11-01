@@ -68,7 +68,7 @@ impl Parameters {
                 }
                 FieldKind::Choice { options } => value
                     .as_str()
-                    .is_some_and(|s| options.iter().any(|o| o == s)),
+                    .is_some_and(|s| options.iter().any(|o| o.value == s)),
             };
             if !valid {
                 return Err(Error::InvalidParameters);

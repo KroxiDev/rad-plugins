@@ -17,12 +17,17 @@ pub fn config() -> Config {
         "org.rad.audio",
         Version {
             major: 0,
-            minor: 2,
+            minor: 4,
             patch: 0,
         },
         1..=1,
     )
-    .capabilities(vec!["dynamic_options".into(), "visual_freshness".into()])
+    .capabilities(vec![
+        "dynamic_options".into(),
+        "labels".into(),
+        "visual_freshness".into(),
+        "visual_states".into(),
+    ])
 }
 
 pub struct AudioPlugin {

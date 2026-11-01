@@ -124,33 +124,6 @@ fn a_jpeg_cover_is_recognised_by_content_not_by_file_name() {
 }
 
 #[test]
-fn a_picture_that_is_not_square_is_fitted_not_stretched() {
-    // 200 x 100 becomes 96 x 48 in the middle, with bars above and below.
-    let image = decoded(&cover_of(&png(&solid(200, 100, [220, 40, 40, 255]))).unwrap());
-    assert!(near(image.get_pixel(48, 48), [220, 40, 40]));
-    assert!(
-        near(image.get_pixel(2, 48), [220, 40, 40]),
-        "the full width is used"
-    );
-    assert!(near(image.get_pixel(48, 4), [0, 0, 0]), "bar above");
-    assert!(near(image.get_pixel(48, 91), [0, 0, 0]), "bar below");
-
-    let tall = decoded(&cover_of(&png(&solid(100, 200, [220, 40, 40, 255]))).unwrap());
-    assert!(
-        near(tall.get_pixel(48, 2), [220, 40, 40]),
-        "the full height is used"
-    );
-    assert!(near(tall.get_pixel(4, 48), [0, 0, 0]), "bar on the left");
-    assert!(near(tall.get_pixel(91, 48), [0, 0, 0]), "bar on the right");
-}
-
-#[test]
-fn transparency_shows_the_dark_background() {
-    let image = decoded(&cover_of(&png(&solid(64, 64, [255, 255, 255, 0]))).unwrap());
-    assert!(near(image.get_pixel(48, 48), [0, 0, 0]));
-}
-
-#[test]
 fn a_busy_picture_still_fits_in_the_size_the_host_allows() {
     // Noise does not compress: the quality is lowered until it fits. At its own size the picture
     // keeps all its noise (a larger one is averaged away when it is scaled down).

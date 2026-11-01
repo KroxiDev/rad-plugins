@@ -1,7 +1,9 @@
 # RAD plugin contract v1
 
-Published contract major **1**, SDK and official plugins **0.2.0**. Target:
-`x86_64-unknown-linux-gnu`. This document describes the first published major;
+Published contract major **1**, SDK **0.3.0**; official Audio and OBS **0.4.0**,
+Media and Metrics **0.3.0**. Target: `x86_64-unknown-linux-gnu`. SDK 0.3.0 adds the
+`labels` and `visual_states` capabilities and a fixed response budget; packages
+that use them need RAD 0.1.6 or later. This document describes the first published major;
 the prerelease linear host APIs 2/3 are not earlier contract majors. They require
 an updated package; RAD does not silently rewrite installed executables.
 
@@ -76,7 +78,7 @@ A schema is `{version, fields}` with positive version. Each field is
 | `boolean` | none |
 | `integer` | inclusive `min`, `max` (signed integers) |
 | `text` | `max_bytes` (1–4096) |
-| `choice` | `options`: 1–64 unique nonempty labels |
+| `choice` | `options`: 1–64 options with unique values; each a nonempty string, or `{value,label}` with `labels` |
 | `dynamic_choice` | `depends_on`: at most four earlier choice/dynamic-choice field IDs |
 
 Parameters are `{schema_version, values}`. Values are booleans, signed integers
@@ -85,6 +87,16 @@ individual strings are at most 4096 bytes. Parameters must match the schema;
 unknown keys, missing required values and out-of-range values fail validation.
 An absent optional value is distinct from a supplied value. Saved dynamic values
 are not silently replaced when a current options list no longer contains them.
+
+With `labels`, a fixed option may carry the text the user reads:
+`{"value":"toggle","label":"Toggle"}`. Parameters always store `value`; a plain
+string still means an option whose text is its value. Optional `translations`
+maps a language (2–3 lowercase letters, at most 16 languages) to at most 512
+entries, each from a text exactly as the manifest writes it to its translation.
+Any label may be translated: actions, visuals, fields, fixed options, visual
+states and fixed labels a plugin returns in its dynamic choices. The host shows
+the user's language and falls back to the manifest text. Translations without
+`labels` are invalid.
 
 Optional manifest `settings` is a schema of **non-secret plugin-wide settings**,
 using the same field system and requiring the `settings` capability. Settings
@@ -120,8 +132,10 @@ parsing is not relaxed. Do not advertise a feature that is not implemented.
 | `dynamic_options` | Options/Choices and dynamic-choice declarations |
 | `credentials` | Immutable credential revisions and their lifecycle |
 | `jpeg` | JPEG visual content |
-| `response_timeout` | Per-action response budget declaration |
+| `labels` | Fixed options with their own text, and manifest `translations` |
+| `response_timeout` | Per-action response budget, fixed or chosen through a field |
 | `visual_freshness` | Visual subscriptions and declared validity/renewal |
+| `visual_states` | Two observed states per visual, action→visual links and `state` content |
 
 A host request has a positive generation and strictly increasing positive request
 ID. Replies echo their request correlation unchanged; subscription updates retain
@@ -185,9 +199,10 @@ the old binding rather than mutating an existing subscription. No settings sette
 message or ACK race exists in v1.
 
 Ordinary actions keep a 5000 ms response budget. With `response_timeout`, an action
-may name an optional integer field with exact bounds 1–120 and a default in that
-range: `{field,default_seconds}`. The Host captures this budget at admission and
-starts it at dispatch. It is not a cancellation or retry protocol.
+declares `{default_seconds}` (1–120) for a fixed budget, or adds `field` naming an
+optional integer field with exact bounds 1–120 that lets the user change it. The
+Host captures this budget at admission and starts it at dispatch. It is not a
+cancellation or retry protocol.
 
 ## Visual freshness and bounded output
 
@@ -211,6 +226,29 @@ provide their own bounded-write behavior. Concurrent frames do not interleave.
 Host ordinary invocation limits are 16 per plugin/64 globally; SDK ordinary limit
 is 16, queries 2 and subscriptions 32. Extra work is rejected, not queued forever.
 These are bounds, not a CPU/RSS performance certification.
+
+## Two-state visuals
+
+With `visual_states`, a visual may declare `states`: exactly two
+`{"id","label","icon"}` entries with unique identifiers and optional `icon`. Order
+matters: the second is the resting state, shown with the unavailable mark when the
+source is unavailable. `icon` is a lowercase-hex PNG, square, at most 256 px and
+8 KiB, used as that state's default image.
+
+An action may declare `"visual": "<visual id>"` to bring that visual with it. The
+visual must be in the same manifest and have two states, and each of its fields
+must exist in the action with the same kind, required there when required in the
+visual. When the user saves the action, the editor sets that visual on the button
+and copies those field values, so it is not chosen separately. Only actions take
+`visual`; only visuals take `states`.
+
+Visual content gains optional `state`, one of the visual's declared IDs. It is sent
+only when `visual_states` was negotiated (the SDK drops it otherwise) and must
+reflect the observed source, never a count of presses. For each state the host
+draws the user's own image, else the manifest icon, else the plugin's image; the
+plugin's color only applies without the user's image. Text is the user's own text
+for that state, otherwise none. `text` and `color` stay optional and still serve
+hosts or visuals without states.
 
 ## Credentials and diagnostics
 

@@ -56,6 +56,7 @@ fn visual_state(kind: Kind, selector: &Selector, cache: &Cache) -> Option<Visual
                 };
                 VisualState::Current {
                     content: VisualContent {
+                        state: Some(if device.muted { "muted" } else { "unmuted" }.into()),
                         text: Some(text.into()),
                         color: Some(color),
                         ..VisualContent::default()

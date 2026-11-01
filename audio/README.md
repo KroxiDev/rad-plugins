@@ -1,56 +1,67 @@
-# Audio plugin
+# Plugin de audio
 
-Mutes, unmutes and toggles the **microphone** and the **audio output**, and shows whether each one
-is muted. Plugin id `org.rad.audio`, version 0.2.0, x86_64 Linux, plugin contract v1.
-See the [contract and author guide](../README.md) for the negotiated capabilities.
+Referencia de la integración oficial para desarrolladores y agentes. Silencia,
+reactiva y alterna el **micrófono** y la **salida de audio**, y muestra si cada uno
+está silenciado. ID `org.rad.audio`, versión 0.4.0, Linux x86_64, contrato de plugins
+v1. Las capacidades negociadas están en el [contrato y la guía para autores](../README.md).
 
-## Requirements
+## Requisitos
 
-- PipeWire with `pipewire-pulse`, or PulseAudio.
-- `pactl` with JSON output (`-f json`) in `/usr/bin`, `/bin` or `/usr/local/bin`. Tested with pactl 17
-  on PipeWire's PulseAudio server.
+- PipeWire con `pipewire-pulse`, o PulseAudio.
+- `pactl` con salida JSON (`-f json`) en `/usr/bin`, `/bin` o `/usr/local/bin`.
+  Probado con pactl 17 sobre el servidor PulseAudio de PipeWire.
 
-The plugin talks to the sound server only by running `pactl`; it has no other dependencies. If
-`pactl` is missing or the server is not running, actions fail with `unavailable` and the state shows
-as unavailable until the server is back.
+El plugin se comunica con el servidor de sonido únicamente mediante `pactl`; no
+requiere otras dependencias para esa comunicación. Si falta `pactl` o el servidor
+no está activo, las acciones fallan con `unavailable` y el estado aparece no
+disponible hasta que vuelva el servidor.
 
-## Actions and states
+## Acciones y estados
 
-| Action | Operations | Device |
+| Acción | Operaciones | Dispositivo |
 | --- | --- | --- |
-| Audio output | toggle, mute, unmute | an output (sink) |
-| Microphone | toggle, mute, unmute | an input (source), monitors excluded |
+| Salida de audio | `toggle` (predeterminada), `mute`, `unmute` | una salida (sink) |
+| Micrófono | `toggle` (predeterminada), `mute`, `unmute` | una entrada (source), excluidos los monitores |
 
-| State | Shows |
+El editor muestra las operaciones como «Alternar», «Silenciar» y «Activar
+sonido», con el resto de los textos traducidos en el manifest
+([ADR 0020](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)). El
+dispositivo se elige primero.
+
+| Estado | Muestra |
 | --- | --- |
-| Audio output state | `On` (green) or `Muted` (red) |
-| Microphone state | `On` (green) or `Muted` (red) |
+| Estado de salida de audio | `On` (verde) o `Muted` (rojo) |
+| Estado de micrófono | `On` (verde) o `Muted` (rojo) |
 
-The **device** is either *Default device (follows changes)* or one specific device.
+El **dispositivo** es *Default device (follows changes)* o un dispositivo concreto.
 
-- *Default* acts on whatever the default device is when the action runs, and the state follows the
-  default when it changes.
-- A *specific* device must exist when the action runs. If it does not, the action fails with
-  `unavailable` and nothing else is touched: no other device is used in its place. Its state shows as
-  unavailable and returns to `On`/`Muted` when the device reappears.
+- *Default* actúa sobre el dispositivo predeterminado al ejecutar la acción; el
+  estado sigue al predeterminado cuando cambia.
+- Un dispositivo *concreto* debe existir al ejecutar la acción. Si no existe,
+  falla con `unavailable` sin tocar otro dispositivo ni sustituirlo. Su estado
+  aparece no disponible y vuelve a `On`/`Muted` cuando reaparece.
 
-State changes made elsewhere (a volume key, a mixer) trigger a fresh observation.
-Unchanged sources are reobserved every 10 seconds; observations renew 25-second validity
-without repeating image/state payloads. There is no independent SDK heartbeat. While a state is
-displayed the plugin follows the server with one `pactl subscribe` process; with nothing displayed
-it runs no background process at all.
+Los cambios de estado externos (una tecla de volumen, un mezclador) provocan una
+nueva observación. Las fuentes sin cambios se vuelven a observar cada 10 segundos;
+las observaciones renuevan la vigencia por 25 segundos sin repetir la carga de
+imagen/estado. El SDK no tiene un heartbeat independiente. Mientras se muestra un
+estado, el plugin sigue al servidor con un único proceso `pactl subscribe`; sin
+estados mostrados no mantiene ningún proceso de fondo.
 
-The microphone *Default device* is looked up by name before acting. If the server's default input is
-a monitor (a recording of what an output plays) rather than a microphone, the action fails with
-`unavailable` and the state shows as unavailable.
+El micrófono *Default device* se resuelve por nombre antes de actuar. Si la entrada
+predeterminada del servidor es un monitor (una grabación de lo que reproduce una
+salida) en vez de un micrófono, la acción falla con `unavailable` y el estado
+aparece no disponible.
 
-When the server cannot be reached the plugin tries again after 1 s, then 2 s, 4 s and so on up to
-30 s, and starts over at 1 s once it answers. A server that comes back can therefore take up to 30 s
-to be noticed.
+Si no se puede alcanzar al servidor, el plugin reintenta tras 1 s, luego 2 s, 4 s y
+así hasta 30 s; vuelve a empezar en 1 s cuando el servidor responde. Por eso puede
+tardar hasta 30 s en detectar que volvió.
 
-## Build and package
+## Compilar y empaquetar
 
-From the `plugins` directory:
+Desde el directorio `plugins`, con las dependencias ya disponibles. El ejemplo
+escribe un paquete local, no una publicación; para la caché offline y el gate
+completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
 
 ```sh
 cargo build --release -p rad-plugin-audio
@@ -58,10 +69,24 @@ cargo run --release -p rad-plugin-sdk --bin radp-pack -- \
     audio/manifest.json target/release/rad-plugin-audio org.rad.audio.radp
 ```
 
-## Tests
+## Pruebas
 
-`cargo test -p rad-plugin-audio` never changes the audio of the machine. It runs the plugin against
-a fake `pactl` (`examples/fake_pactl.rs`) that keeps its state in a temporary directory and can
-simulate a stopped server, a hung command and garbage output. The production no-server test runs the real executable and pactl inside a bwrap namespace
-with private runtime, HOME, devices and network, without access to the personal audio server.
-It fails closed if that isolation is unavailable.
+`cargo test -p rad-plugin-audio` no cambia el audio de la máquina. Ejecuta el plugin
+contra un `pactl` falso (`examples/fake_pactl.rs`) que conserva su estado en un
+directorio temporal y puede simular un servidor detenido, un comando bloqueado y
+salida inválida. La prueba de producción sin servidor ejecuta el binario real y
+pactl dentro de un namespace bwrap con runtime, HOME, dispositivos y red privados,
+sin acceso al servidor de audio personal. Si no está disponible ese aislamiento,
+la prueba falla sin continuar. Compilar primero los helpers según la
+[validación del workspace](../README.md#compilar-probar-y-empaquetar).
+
+## Caras por estado
+
+Las acciones vinculan su visual automáticamente al guardarse en RAD. El plugin
+publica el identificador del estado observado mediante la capacidad negociada
+`visual_states`; no alterna un contador local de pulsaciones. El manifest incluye
+dos etiquetas traducibles e iconos PNG por visual, con fuentes originales SVG en
+`icons/`. Las imágenes propias y textos por estado se editan desde las pestañas de
+la tecla. Por defecto se muestra solo el icono; sin fuente disponible se usa el
+segundo estado con marca roja. Los iconos caben en el límite existente de 64 KiB
+del manifest. El texto anterior sigue como respaldo para un host sin la capacidad.

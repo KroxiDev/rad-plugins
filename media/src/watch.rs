@@ -175,6 +175,16 @@ pub(crate) struct Watch {
 }
 
 impl Watch {
+    #[cfg(feature = "fixture-tests")]
+    pub(crate) fn with_fixture_converter(
+        bus: Arc<Bus>,
+        timing: Timing,
+        converter: Arc<Converter>,
+    ) -> Arc<Self> {
+        let watch = Self::new(bus, timing);
+        locked(&watch.state).converter = Some(converter);
+        watch
+    }
     pub(crate) fn new(bus: Arc<Bus>, timing: Timing) -> Arc<Self> {
         Arc::new(Self {
             bus,

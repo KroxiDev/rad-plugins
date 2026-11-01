@@ -4,18 +4,23 @@ use crate::Error;
 pub const DYNAMIC_OPTIONS: &str = "dynamic_options";
 pub const CREDENTIALS: &str = "credentials";
 pub const JPEG: &str = "jpeg";
+/// Fixed options with their own text and manifest translations.
+pub const LABELS: &str = "labels";
 pub const RESPONSE_TIMEOUT: &str = "response_timeout";
 pub const CONTROLS: &str = "controls";
 pub const SETTINGS: &str = "settings";
+pub const VISUAL_STATES: &str = "visual_states";
 pub const VISUAL_FRESHNESS: &str = "visual_freshness";
 pub const SUPPORTED_CAPABILITIES: &[&str] = &[
     CONTROLS,
     CREDENTIALS,
     DYNAMIC_OPTIONS,
     JPEG,
+    LABELS,
     RESPONSE_TIMEOUT,
     SETTINGS,
     VISUAL_FRESHNESS,
+    VISUAL_STATES,
 ];
 pub fn validate_capabilities(values: &[String]) -> Result<(), Error> {
     if values.len() > 32

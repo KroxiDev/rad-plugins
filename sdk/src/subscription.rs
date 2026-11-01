@@ -82,7 +82,12 @@ impl Subscription {
 
     /// Publish from the observing source loop, never from a separate heartbeat.
     /// Equal state renews validity without retransmitting content or image.
-    pub fn publish(&self, state: VisualState, valid_for_ms: u64) {
+    pub fn publish(&self, mut state: VisualState, valid_for_ms: u64) {
+        if !self.0.writer.supports(rad_plugin_contract::VISUAL_STATES)
+            && let VisualState::Current { content } | VisualState::Stale { content } = &mut state
+        {
+            content.state = None;
+        }
         let state = if state.is_valid() {
             state
         } else {

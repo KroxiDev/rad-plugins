@@ -6,6 +6,55 @@ use std::{
     os::unix::net::UnixStream,
     time::Duration,
 };
+/// Every request the plugin may send, as a complete fake OBS announces them.
+const AVAILABLE: &[&str] = &[
+    "GetVersion",
+    "GetSceneCollectionList",
+    "GetSceneList",
+    "GetGroupList",
+    "GetInputList",
+    "GetCurrentProgramScene",
+    "SetCurrentProgramScene",
+    "GetSceneItemList",
+    "GetGroupSceneItemList",
+    "GetSceneItemEnabled",
+    "SetSceneItemEnabled",
+    "GetSourceFilterList",
+    "GetSourceFilter",
+    "SetSourceFilterEnabled",
+    "GetInputMute",
+    "SetInputMute",
+    "GetRecordStatus",
+    "StartRecord",
+    "StopRecord",
+    "PauseRecord",
+    "ResumeRecord",
+    "GetStreamStatus",
+    "StartStream",
+    "StopStream",
+    "GetVirtualCamStatus",
+    "StartVirtualCam",
+    "StopVirtualCam",
+    "GetReplayBufferStatus",
+    "StartReplayBuffer",
+    "StopReplayBuffer",
+    "SaveReplayBuffer",
+    "GetLastReplayBufferReplay",
+];
+/// An action whose effect already holds: it reads the recording state and changes nothing.
+const RECORDING: &str = r#"{"kind":"invoke","credential_revision":REV,"action":"record","parameters":{"schema_version":1,"values":{"operation":"start"}}}"#;
+fn start_recording(revision: u64) -> Value {
+    serde_json::from_str(&RECORDING.replace("REV", &revision.to_string())).unwrap()
+}
+/// Answers the next request, which must be `expected`, with `data`.
+fn answer(ws: &mut tungstenite::WebSocket<std::net::TcpStream>, expected: &str, data: Value) {
+    let req: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
+    assert_eq!(req["d"]["requestType"], expected);
+    ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestId":req["d"]["requestId"],"requestType":expected,"requestStatus":{"result":true,"code":100},"responseData":data}}).to_string().into())).unwrap();
+}
+fn recording() -> Value {
+    json!({"outputActive":true,"outputPaused":false})
+}
 fn send(s: &mut UnixStream, n: u64, message: Value) {
     let b = serde_json::to_vec(
         &json!({"protocol":1,"correlation":{"generation":1,"request":n},"message":message}),
@@ -72,7 +121,7 @@ fn scripted(
         ))
         .unwrap();
         for (expected, data) in
-            std::iter::once(("GetVersion", json!({"availableRequests":REQUIRED}))).chain(calls)
+            std::iter::once(("GetVersion", json!({"availableRequests":AVAILABLE}))).chain(calls)
         {
             let req: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
             assert_eq!(req["d"]["requestType"], expected);
@@ -88,7 +137,7 @@ fn scripted(
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -164,7 +213,7 @@ fn visual_observes_output_without_control_and_unsubscribe_releases_handle() {
     server.join().unwrap();
 }
 #[test]
-fn disconnect_after_effect_never_replays_on_next_wait() {
+fn disconnect_after_effect_never_replays_on_next_action() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let endpoint = match listener.local_addr().unwrap() {
         std::net::SocketAddr::V4(v) => v,
@@ -190,12 +239,19 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
             .unwrap();
             let req: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
             assert_eq!(req["d"]["requestType"], "GetVersion");
-            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":req["d"]["requestId"],"requestStatus":{"result":true,"code":100},"responseData":{"availableRequests":REQUIRED}}}).to_string().into())).unwrap();
+            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":req["d"]["requestId"],"requestStatus":{"result":true,"code":100},"responseData":{"availableRequests":AVAILABLE}}}).to_string().into())).unwrap();
             if cycle == 0 {
+                answer(
+                    &mut ws,
+                    "GetRecordStatus",
+                    json!({"outputActive":false,"outputPaused":false}),
+                );
                 let req: Value =
                     serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
                 assert_eq!(req["d"]["requestType"], "StartRecord");
             } else {
+                // The next action reads first: the lost StartRecord is never sent again.
+                answer(&mut ws, "GetRecordStatus", recording());
                 assert!(ws.read().is_err(), "old command replayed");
             }
         }
@@ -209,7 +265,7 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -228,11 +284,7 @@ fn disconnect_after_effect_never_replays_on_next_wait() {
         lock(&shared.inner).sessions.is_empty(),
         "failed action retained a session"
     );
-    send(
-        &mut host,
-        4,
-        json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":2}}}),
-    );
+    send(&mut host, 4, start_recording(1));
     assert_eq!(recv(&mut host)["message"]["outcome"]["status"], "success");
     drop(host);
     assert!(run.join().unwrap().is_ok());
@@ -261,7 +313,11 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
         ))
         .unwrap();
         for (expected, data) in [
-            ("GetVersion", json!({"availableRequests":REQUIRED})),
+            ("GetVersion", json!({"availableRequests":AVAILABLE})),
+            (
+                "GetRecordStatus",
+                json!({"outputActive":false,"outputPaused":false}),
+            ),
             ("StartRecord", json!({})),
             (
                 "GetRecordStatus",
@@ -282,7 +338,7 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -302,7 +358,7 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
     server.join().unwrap();
 }
 #[test]
-fn challenged_and_unchallenged_wait_release_socket_before_ack() {
+fn challenged_and_unchallenged_actions_release_socket_before_ack() {
     for challenged in [false, true] {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let endpoint = match listener.local_addr().unwrap() {
@@ -338,7 +394,8 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
             .unwrap();
             let get: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
             assert_eq!(get["d"]["requestType"], "GetVersion");
-            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestId":get["d"]["requestId"],"requestType":"GetVersion","requestStatus":{"result":true,"code":100},"responseData":{"availableRequests":crate::plugin::REQUIRED}}}).to_string().into())).unwrap();
+            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestId":get["d"]["requestId"],"requestType":"GetVersion","requestStatus":{"result":true,"code":100},"responseData":{"availableRequests":AVAILABLE}}}).to_string().into())).unwrap();
+            answer(&mut ws, "GetRecordStatus", recording());
             assert!(ws.read().is_err());
         });
         let (mut host, peer) = UnixStream::pair().unwrap();
@@ -349,7 +406,7 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "ready");
         send(
@@ -358,11 +415,7 @@ fn challenged_and_unchallenged_wait_release_socket_before_ack() {
             json!({"kind":"credentials","revision":1,"values":[{"slot":"password","value":"supersecretpassword"}]}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "credentials_applied");
-        send(
-            &mut host,
-            3,
-            json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":2}}}),
-        );
+        send(&mut host, 3, start_recording(1));
         assert_eq!(recv(&mut host)["message"]["outcome"]["status"], "success");
         assert_server_finished(&server);
         send(
@@ -402,7 +455,7 @@ fn event_during_snapshot_drains_old_reply_before_resync_and_never_publishes_it()
         ))
         .unwrap();
         let v: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
-        ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":v["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":REQUIRED}}}).to_string().into())).unwrap();
+        ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":v["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":AVAILABLE}}}).to_string().into())).unwrap();
         let old: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
         assert_eq!(old["d"]["requestType"], "GetRecordStatus");
         ws.send(tungstenite::Message::Text(json!({"op":5,"d":{"eventType":"RecordStateChanged","eventData":{"outputActive":true}}}).to_string().into())).unwrap();
@@ -430,7 +483,7 @@ fn event_during_snapshot_drains_old_reply_before_resync_and_never_publishes_it()
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -496,7 +549,8 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
             ))
             .unwrap();
             let req: Value = serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
-            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":req["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":REQUIRED}}}).to_string().into())).unwrap();
+            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":req["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":AVAILABLE}}}).to_string().into())).unwrap();
+            answer(&mut ws, "GetRecordStatus", recording());
             let _ = ws.read();
             drop(stalled);
         });
@@ -508,7 +562,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
         );
         recv(&mut host);
         send(
@@ -517,11 +571,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
             json!({"kind":"credentials","revision":1,"values":[]}),
         );
         recv(&mut host);
-        send(
-            &mut host,
-            3,
-            json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":3}}}),
-        );
+        send(&mut host, 3, start_recording(1));
         accepted_rx.recv_timeout(Duration::from_secs(1)).unwrap();
         send(
             &mut host,
@@ -530,11 +580,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
         );
         recv(&mut host);
         let start = Instant::now();
-        send(
-            &mut host,
-            5,
-            json!({"kind":"invoke","credential_revision":2,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":1}}}),
-        );
+        send(&mut host, 5, start_recording(2));
         let reply = recv(&mut host);
         assert_eq!(reply["correlation"]["request"], 5);
         assert_eq!(reply["message"]["outcome"]["status"], "success");
@@ -600,39 +646,8 @@ fn flooded_session_defers_payload_over_64k_until_next_worker_turn() {
 }
 
 #[test]
-fn wait_deadlines_default30_and_bounds1_120_use_injected_instant_without_sleep() {
-    let now = Instant::now();
-    for (value, seconds) in [(None, 30), (Some(json!(1)), 1), (Some(json!(120)), 120)] {
-        let mut params = Parameters {
-            schema_version: 1,
-            values: serde_json::Map::new(),
-        };
-        if let Some(v) = value {
-            params.values.insert("timeout_seconds".into(), v);
-        }
-        let deadline = now + Duration::from_secs(action_timeout("wait", &params).unwrap());
-        assert_eq!(deadline.duration_since(now), Duration::from_secs(seconds));
-        assert!(now + Duration::from_secs(seconds - 1) < deadline);
-        assert!(now + Duration::from_secs(seconds) >= deadline);
-    }
-    for value in [json!(0), json!(121), json!(-1), json!(1.5), json!("30")] {
-        let params = Parameters {
-            schema_version: 1,
-            values: json!({"timeout_seconds":value})
-                .as_object()
-                .unwrap()
-                .clone(),
-        };
-        assert_eq!(
-            action_timeout("wait", &params),
-            Err(FailureCode::InvalidParameters)
-        );
-        assert_eq!(action_timeout("record", &params), Ok(5));
-    }
-}
-
-#[test]
-fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
+fn an_action_waits_fifteen_seconds_for_obs_to_accept_then_says_it_is_unavailable() {
+    // Bound but never answering, like OBS while it is still opening.
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let endpoint = match listener.local_addr().unwrap() {
         std::net::SocketAddr::V4(v) => v,
@@ -658,7 +673,7 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -667,42 +682,99 @@ fn worker_clock_expires_wait_at_one_default_thirty_and_120_seconds() {
         json!({"kind":"credentials","revision":1,"values":[]}),
     );
     recv(&mut host);
-    for (i, values, seconds) in [
-        (3, json!({"timeout_seconds":1}), 1),
-        (4, json!({}), 30),
-        (5, json!({"timeout_seconds":120}), 120),
-    ] {
-        let start = Instant::now();
-        send(
-            &mut host,
-            i,
-            json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":values}}),
+    let start = Instant::now();
+    send(&mut host, 3, start_recording(1));
+    let (connect_by, deadline) = loop {
+        let inner = lock(&shared.inner);
+        if let Some(w) = inner
+            .sessions
+            .get(&(1, endpoint))
+            .and_then(|s| s.waits.first())
+        {
+            break (w.connect_by, w.deadline);
+        }
+        drop(inner);
+        assert!(start.elapsed() < Duration::from_secs(2));
+        std::thread::yield_now();
+    };
+    let after = |instant: Instant, seconds| {
+        let elapsed = instant.duration_since(start);
+        elapsed >= Duration::from_secs(seconds)
+            && elapsed < Duration::from_secs(seconds) + Duration::from_millis(100)
+    };
+    assert!(after(connect_by, 15), "waits for OBS to open");
+    assert!(after(deadline, 18), "inside the 20 s the manifest declares");
+    worker_turn(&shared, connect_by - Duration::from_nanos(1));
+    assert_eq!(lock(&shared.inner).sessions[&(1, endpoint)].waits.len(), 1);
+    worker_turn(&shared, connect_by);
+    assert!(lock(&shared.inner).sessions.is_empty());
+    assert_eq!(recv(&mut host)["message"]["outcome"]["code"], "unavailable");
+    drop(host);
+    assert!(run.join().unwrap().is_ok());
+}
+
+#[test]
+fn a_request_obs_does_not_announce_fails_without_being_sent() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let std::net::SocketAddr::V4(endpoint) = listener.local_addr().unwrap() else {
+        unreachable!()
+    };
+    let server = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let mut ws = tungstenite::accept(stream).unwrap();
+        ws.send(tungstenite::Message::Text(
+            json!({"op":0,"d":{"rpcVersion":1}}).to_string().into(),
+        ))
+        .unwrap();
+        ws.read().unwrap();
+        ws.send(tungstenite::Message::Text(
+            json!({"op":2,"d":{"negotiatedRpcVersion":1}})
+                .to_string()
+                .into(),
+        ))
+        .unwrap();
+        // An OBS without a virtual camera.
+        let announced: Vec<_> = AVAILABLE
+            .iter()
+            .filter(|r| !r.contains("VirtualCam"))
+            .collect();
+        answer(
+            &mut ws,
+            "GetVersion",
+            json!({ "availableRequests": announced }),
         );
-        let deadline = loop {
-            let inner = lock(&shared.inner);
-            if let Some(w) = inner
-                .sessions
-                .get(&(1, endpoint))
-                .and_then(|s| s.waits.first())
-            {
-                break w.deadline;
-            }
-            drop(inner);
-            assert!(start.elapsed() < Duration::from_secs(2));
-            std::thread::yield_now();
-        };
-        assert!(deadline.duration_since(start) >= Duration::from_secs(seconds));
-        assert!(
-            deadline.duration_since(start)
-                < Duration::from_secs(seconds) + Duration::from_millis(100)
-        );
-        worker_turn(&shared, deadline - Duration::from_nanos(1));
-        assert_eq!(lock(&shared.inner).sessions[&(1, endpoint)].waits.len(), 1);
-        worker_turn(&shared, deadline);
-        assert!(lock(&shared.inner).sessions.is_empty());
-        let answer = recv(&mut host);
-        assert_eq!(answer["message"]["outcome"]["code"], "timed_out");
-    }
+        assert!(ws.read().is_err(), "nothing else is sent");
+    });
+    let (mut host, peer) = UnixStream::pair().unwrap();
+    host.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+    let input = peer.try_clone().unwrap();
+    let p = ObsPlugin::for_test(endpoint).unwrap();
+    let run = std::thread::spawn(move || rad_plugin_sdk::run(config(), p, input, peer));
+    send(
+        &mut host,
+        1,
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+    );
+    recv(&mut host);
+    send(
+        &mut host,
+        2,
+        json!({"kind":"credentials","revision":1,"values":[]}),
+    );
+    recv(&mut host);
+    send(
+        &mut host,
+        3,
+        json!({"kind":"invoke","credential_revision":1,"action":"virtualcam","parameters":{"schema_version":1,"values":{"operation":"toggle"}}}),
+    );
+    assert_eq!(
+        recv(&mut host)["message"]["outcome"]["code"],
+        "incompatible"
+    );
+    assert_server_finished(&server);
     drop(host);
     assert!(run.join().unwrap().is_ok());
 }
@@ -754,7 +826,8 @@ fn revision_churn_child() {
             .unwrap();
             let request: Value =
                 serde_json::from_str(ws.read().unwrap().to_text().unwrap()).unwrap();
-            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":request["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":REQUIRED}}}).to_string().into())).unwrap();
+            ws.send(tungstenite::Message::Text(json!({"op":7,"d":{"requestType":"GetVersion","requestId":request["d"]["requestId"],"requestStatus":{"result":true},"responseData":{"availableRequests":AVAILABLE}}}).to_string().into())).unwrap();
+            answer(&mut ws, "GetRecordStatus", recording());
             assert!(ws.read().is_err(), "release must close socket");
             drop(ws);
             observed.store(n, Ordering::SeqCst);
@@ -769,7 +842,7 @@ fn revision_churn_child() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     std::thread::sleep(Duration::from_millis(20));
@@ -783,11 +856,7 @@ fn revision_churn_child() {
             json!({"kind":"credentials","revision":revision,"values":[]}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "credentials_applied");
-        send(
-            &mut host,
-            id + 1,
-            json!({"kind":"invoke","credential_revision":revision,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":2}}}),
-        );
+        send(&mut host, id + 1, start_recording(revision));
         let deadline = Instant::now() + Duration::from_secs(3);
         loop {
             if closed.load(Ordering::SeqCst) >= revision as usize {
@@ -871,6 +940,10 @@ fn shared_transport_survives_one_consumer_and_closes_after_the_last() {
             "GetRecordStatus",
             json!({"outputActive":true,"outputPaused":false}),
         ),
+        (
+            "GetRecordStatus",
+            json!({"outputActive":true,"outputPaused":false}),
+        ),
     ]);
     for request in [3, 4] {
         send(
@@ -903,13 +976,9 @@ fn shared_transport_survives_one_consumer_and_closes_after_the_last() {
         !server.is_finished(),
         "remaining consumer lost its shared transport"
     );
-    // A Wait shares the surviving authenticated connection; a second connection would not
-    // be served by this fixture and could not answer successfully.
-    send(
-        &mut host,
-        7,
-        json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{"timeout_seconds":1}}}),
-    );
+    // An action shares the surviving authenticated connection; a second connection would
+    // not be served by this fixture and could not answer successfully.
+    send(&mut host, 7, start_recording(1));
     loop {
         let reply = recv(&mut host);
         if reply["correlation"]["request"] == 7 {
@@ -1006,7 +1075,7 @@ fn settings_port_separates_live_sessions_with_the_same_credentials() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","settings"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","settings"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
     );
     recv(&mut host);
     send(
@@ -1019,7 +1088,7 @@ fn settings_port_separates_live_sessions_with_the_same_credentials() {
         send(
             &mut host,
             i,
-            json!({"kind":"invoke","credential_revision":1,"action":"wait","parameters":{"schema_version":1,"values":{}},"settings":{"schema_version":1,"values":{"port":port}}}),
+            json!({"kind":"invoke","credential_revision":1,"action":"record","parameters":{"schema_version":1,"values":{"operation":"start"}},"settings":{"schema_version":1,"values":{"port":port}}}),
         );
     }
     let until = Instant::now() + Duration::from_secs(2);
@@ -1102,4 +1171,61 @@ fn settings_port_is_bounded_loopback_and_test_mode_never_reaches_personal_obs() 
         Err(FailureCode::InvalidParameters)
     );
     assert_eq!(test.endpoint_for(None).unwrap().port(), 12345);
+}
+
+#[test]
+fn binary_visuals_report_observed_state_not_button_presses() {
+    let p = Parameters {
+        schema_version: 1,
+        values: Default::default(),
+    };
+    for (source, data, expected) in [
+        (
+            "record",
+            json!({"outputActive":true,"outputPaused":true}),
+            "recording",
+        ),
+        ("record", json!({"outputActive":false}), "stopped"),
+        (
+            "pause",
+            json!({"outputActive":true,"outputPaused":true}),
+            "paused",
+        ),
+        (
+            "pause",
+            json!({"outputActive":false,"outputPaused":false}),
+            "running",
+        ),
+        ("stream", json!({"outputActive":true}), "live"),
+        ("mute", json!({"inputMuted":false}), "unmuted"),
+        ("item", json!({"sceneItemEnabled":false}), "hidden"),
+        ("filter", json!({"filterEnabled":true}), "on"),
+        ("virtualcam", json!({"outputActive":false}), "off"),
+        ("replay", json!({"outputActive":true}), "on"),
+    ] {
+        let VisualState::Current { content } = visual_state(source, &p, &data) else {
+            panic!("current {source}");
+        };
+        assert_eq!(content.state.as_deref(), Some(expected), "{source}");
+    }
+}
+
+#[test]
+fn scene_visual_uses_observed_program_and_preserves_legacy_text() {
+    let p: Parameters = serde_json::from_value(json!({"schema_version":1,"values":{
+        "scene":json!({"v":1,"collection":"Studio","kind":"scene","name":"Camera"}).to_string()
+    }}))
+    .unwrap();
+    for (name, state, text) in [
+        ("Camera", "active", "Program"),
+        ("Slides", "inactive", "Inactive"),
+    ] {
+        let VisualState::Current { content } =
+            visual_state("scene", &p, &json!({"currentProgramSceneName":name}))
+        else {
+            panic!()
+        };
+        assert_eq!(content.state.as_deref(), Some(state));
+        assert_eq!(content.text.as_deref(), Some(text));
+    }
 }

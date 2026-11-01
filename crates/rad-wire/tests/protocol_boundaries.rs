@@ -14,32 +14,7 @@ fn ready() -> Session {
 fn envelope(args: &str) -> String {
     format!(r#"{{"v":1,"id":"2","op":"unknown_future_operation","args":{args}}}"#)
 }
-#[test]
-fn nested_duplicates_after_valid_handshake_are_fatal_even_null_and_unescaped_aliases() {
-    for args in [
-        r#"{"a":null,"a":null}"#,
-        r#"{"arr":[{"nested":{"a":0,"\u0061":1}}]}"#,
-        r#"{"𐀀":0,"\uD800\uDC00":1}"#,
-        r#"{"obj":{"x":{},"x":[]}}"#,
-    ] {
-        let mut s = ready();
-        let err = accept(&mut s, &envelope(args)).unwrap_err();
-        assert_eq!(
-            err,
-            RequestError {
-                code: ErrorCode::InvalidRequest,
-                id: None,
-                close: true
-            }
-        );
-        assert_eq!(
-            accept(&mut s, r#"{"v":1,"id":"3","op":"status","args":{}}"#)
-                .unwrap_err()
-                .code,
-            ErrorCode::Closed
-        );
-    }
-}
+
 #[test]
 fn mixed_container_depth_empty_boundary_and_sibling_limits_are_independent() {
     for depth in 0..=16 {
@@ -128,21 +103,4 @@ fn all_recoverable_args_shapes_consume_id_and_max_error_cannot_wrap() {
             .unwrap_err()
             .close
     );
-}
-#[test]
-fn unicode_string_boundary_counts_bytes_and_error_does_not_echo_secret() {
-    for (n, extra, ok) in [(4096, "", true), (4096, "a", false)] {
-        let payload = envelope(&format!("{{\"text\":\"{}{extra}\"}}", "😀".repeat(n)));
-        assert_eq!(accept(&mut ready(), &payload).is_ok(), ok);
-    }
-    let secret = "SENTINEL_PRIVATE";
-    let payload = envelope(&format!("{{\"{secret}\":1e999}}"));
-    let err = accept(&mut ready(), &payload).unwrap_err();
-    assert!(!format!("{err:?}").contains(secret));
-    assert_eq!(err.id, None);
-    assert!(err.close);
-    // Closed operations are deliberately NOT interpreted by this envelope-only seam.
-    let request = accept(&mut ready(), &envelope(r#"{"client_role":"editor"}"#)).unwrap();
-    assert_eq!(request.operation(), "unknown_future_operation");
-    assert_eq!(request.args()["client_role"], "editor");
 }

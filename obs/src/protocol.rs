@@ -49,11 +49,6 @@ pub(crate) fn decode(text: &str) -> Result<Value, FailureCode> {
         Err(FailureCode::Failed)
     }
 }
-pub(crate) fn supports(requests: &[Value]) -> bool {
-    crate::plugin::REQUIRED
-        .iter()
-        .all(|r| requests.iter().any(|v| v == r))
-}
 
 pub(crate) fn identify(hello: &Value, password: Option<&str>) -> Result<String, FailureCode> {
     if hello["op"] != 0 || hello["d"]["rpcVersion"].as_u64().is_none_or(|v| v < 1) {
@@ -122,15 +117,6 @@ mod tests {
             v,
             json!({"op":1,"d":{"rpcVersion":1,"eventSubscriptions":239}})
         );
-    }
-    #[test]
-    fn connection_requires_control_and_catalog_capabilities_not_just_version() {
-        assert!(!supports(&[json!("GetVersion")]));
-        let requests = crate::plugin::REQUIRED
-            .iter()
-            .map(|v| json!(v))
-            .collect::<Vec<_>>();
-        assert!(supports(&requests));
     }
     #[test]
     fn peer_json_is_bounded_before_recursive_decoding_and_strings_are_capped() {

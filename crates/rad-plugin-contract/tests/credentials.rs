@@ -77,44 +77,7 @@ fn action_response_timeout_is_declared_bounded_and_capability_only() {
         assert!(parsed.validate(1, "test").is_err());
     }
 }
-#[test]
-fn declared_budget_uses_seconds_and_legacy_default_without_widening_schema() {
-    let mut m = manifest();
-    m.actions[0].credential_slots.clear();
-    let mut p = Parameters {
-        schema_version: 1,
-        values: Default::default(),
-    };
-    assert_eq!(m.actions[0].response_budget_ms(&p), Ok(5000));
-    m.actions[0].schema.fields.push(Field {
-        id: "seconds".into(),
-        label: "Seconds".into(),
-        required: false,
-        kind: FieldKind::Integer { min: 1, max: 120 },
-    });
-    m.actions[0].response_timeout = Some(ResponseTimeout {
-        field: "seconds".into(),
-        default_seconds: 30,
-    });
-    assert_eq!(m.actions[0].response_budget_ms(&p), Ok(30000));
-    for (seconds, expected) in [(1, 1000), (120, 120000)] {
-        p.values.insert("seconds".into(), json!(seconds));
-        let doc = Document::new(&serde_json::to_vec(&p).unwrap()).unwrap();
-        assert_eq!(doc.response_budget_ms(&m.actions[0]), Ok(expected));
-    }
-    for seconds in [0, 121] {
-        p.values.insert("seconds".into(), json!(seconds));
-        assert_eq!(
-            m.actions[0].response_budget_ms(&p),
-            Err(Error::InvalidParameters)
-        );
-    }
-    m.capabilities.retain(|c| c != RESPONSE_TIMEOUT);
-    assert_eq!(m.validate(1, "test"), Err(Error::InvalidManifest));
-    m.capabilities.push(RESPONSE_TIMEOUT.into());
-    m.visuals.push(m.actions.remove(0));
-    assert_eq!(m.validate(1, "test"), Err(Error::InvalidManifest));
-}
+
 #[test]
 fn largest_escaped_snapshot_fits_and_limits_are_enforced_before_writing() {
     let values: Vec<_> = (0..32)

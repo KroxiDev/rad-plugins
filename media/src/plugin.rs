@@ -12,7 +12,7 @@ pub fn config() -> Config {
         "org.rad.media",
         Version {
             major: 0,
-            minor: 2,
+            minor: 3,
             patch: 0,
         },
         1..=1,
@@ -20,6 +20,7 @@ pub fn config() -> Config {
     .capabilities(vec![
         "dynamic_options".into(),
         "jpeg".into(),
+        "labels".into(),
         "visual_freshness".into(),
     ])
 }
@@ -35,6 +36,21 @@ struct Shared {
 }
 
 impl MediaPlugin {
+    /// Owned integration fixture only; never enabled by environment or by normal construction.
+    #[cfg(feature = "fixture-tests")]
+    #[doc(hidden)]
+    pub fn with_fixture_converter(
+        bus_address: String,
+        timing: Timing,
+        gate: std::os::unix::net::UnixStream,
+    ) -> Self {
+        let bus = Arc::new(Bus::new(Some(bus_address)));
+        let converter = Arc::new(crate::cover::Converter::with_fixture_gate(gate));
+        let watch = Watch::with_fixture_converter(Arc::clone(&bus), timing.clone(), converter);
+        Self {
+            shared: Arc::new(Shared { bus, timing, watch }),
+        }
+    }
     /// `bus_address` is the session bus to use; `None` when there is none.
     pub fn new(bus_address: Option<String>, timing: Timing) -> Self {
         let bus = Arc::new(Bus::new(bus_address));

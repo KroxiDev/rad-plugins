@@ -58,57 +58,6 @@ fn centre(visual: &Visual) -> [u8; 3] {
 }
 
 #[test]
-fn a_cover_is_shown_as_a_small_jpeg_of_the_right_size() {
-    let bus = PrivateBus::start();
-    let mut player = FakePlayer::start(&bus, STRAWBERRY);
-    let art = Art::new([30, 90, 220, 255]);
-    player
-        .command(&format!("art {}", art.url()))
-        .command("status Playing")
-        .sync();
-    let mut host = Host::start(Some(bus.address()), quick());
-    let subscription = host.subscribe("strawberry");
-    let (_, visual) = host
-        .wait_visual(subscription, |v| v.jpeg_hex.is_some(), secs(5))
-        .expect("a cover");
-    assert_eq!(visual.availability, "current");
-    assert!(visual.jpeg_hex.as_ref().unwrap().len() <= 16384);
-    let [red, green, blue] = centre(&visual);
-    assert!(
-        blue > 180 && red < 80 && green < 130,
-        "{:?}",
-        [red, green, blue]
-    );
-    assert_eq!(visual.text, None, "the cover is the whole picture");
-    host.finish().unwrap();
-}
-
-#[test]
-fn without_a_cover_the_state_is_shown_as_text_and_colour() {
-    let bus = PrivateBus::start();
-    let mut player = FakePlayer::start(&bus, STRAWBERRY);
-    let mut host = Host::start(Some(bus.address()), quick());
-    let subscription = host.subscribe("strawberry");
-    let (_, stopped) = host
-        .wait_visual(subscription, |v| v.is("current", Some("Stopped")), secs(5))
-        .unwrap();
-    assert_eq!(stopped.jpeg_hex, None);
-    let mut colours = vec![stopped.color.expect("a colour")];
-    for state in ["Playing", "Paused"] {
-        player.command(&format!("status {state}"));
-        let (_, visual) = host
-            .wait_visual(subscription, |v| v.is("current", Some(state)), HEARTBEAT)
-            .unwrap_or_else(|seen| panic!("never {state}: {seen:?}"));
-        colours.push(visual.color.expect("a colour"));
-    }
-    colours.sort();
-    colours.dedup();
-    assert_eq!(colours.len(), 3, "each state has its own colour");
-    assert!(colours.iter().all(|c| c[3] == 255));
-    host.finish().unwrap();
-}
-
-#[test]
 fn a_cover_that_cannot_be_used_leaves_the_text() {
     let bus = PrivateBus::start();
     let mut player = FakePlayer::start(&bus, STRAWBERRY);

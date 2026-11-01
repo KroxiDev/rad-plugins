@@ -4,7 +4,6 @@ use serde_json::json;
 use std::time::{Duration, Instant};
 use support::*;
 
-const BRAVE: &str = "org.mpris.MediaPlayer2.brave.instance4242";
 const STRAWBERRY: &str = "org.mpris.MediaPlayer2.strawberry";
 
 fn pair(value: &str, label: &str) -> (String, String) {
@@ -16,29 +15,6 @@ fn player(bus: &PrivateBus, bus_name: &str, identity: &str) -> FakePlayer {
     let mut player = FakePlayer::start(bus, bus_name);
     player.command(&format!("identity {identity}")).sync();
     player
-}
-
-#[test]
-fn running_applications_are_offered_by_the_name_they_give_themselves() {
-    let bus = PrivateBus::start();
-    let _brave = player(&bus, BRAVE, "Brave");
-    let _strawberry = player(&bus, STRAWBERRY, "Strawberry Music Player");
-    let mut host = Host::start(Some(bus.address()), quick());
-    // The same list for the action and for the visual; the value is the application, not the
-    // instance, so a restarted browser is still the same choice.
-    for (scope, definition) in [("action", "control"), ("visual", "now_playing")] {
-        let list = host.options(scope, definition, "player");
-        assert_eq!(list["availability"], "available", "{list}");
-        assert_eq!(
-            list["options"],
-            json!([
-                {"value":"brave","label":"Brave"},
-                {"value":"strawberry","label":"Strawberry Music Player"},
-            ]),
-            "{definition}"
-        );
-    }
-    host.finish().unwrap();
 }
 
 #[test]

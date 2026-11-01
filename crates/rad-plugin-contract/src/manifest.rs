@@ -1,6 +1,6 @@
-use crate::{Error, HOST_API_MIN};
+use crate::{ChoiceOption, Error, HOST_API_MIN};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,10 +43,18 @@ pub struct Manifest {
     pub targets: Vec<String>,
     pub actions: Vec<Definition>,
     pub visuals: Vec<Definition>,
+    /// From the `labels` capability: the plugin's own texts in other languages, keyed by
+    /// language and then by the text as the manifest writes it.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub translations: BTreeMap<String, BTreeMap<String, String>>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Definition {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub states: Vec<VisualStateDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visual: Option<String>,
     #[serde(default = "default_gestures")]
     pub gestures: Vec<Gesture>,
     pub id: String,
@@ -56,10 +64,56 @@ pub struct Definition {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub response_timeout: Option<ResponseTimeout>,
 }
+/// Ordered binary states; the second is shown when the source is unavailable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct VisualStateDefinition {
+    pub id: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+}
+fn valid_icon(hex: &str) -> bool {
+    if hex.is_empty()
+        || hex.len() > 16384
+        || !hex.len().is_multiple_of(2)
+        || !hex
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return false;
+    }
+    let bytes: Vec<u8> = (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).expect("checked hex"))
+        .collect();
+    let decoder = png::Decoder::new_with_limits(
+        std::io::Cursor::new(bytes),
+        png::Limits { bytes: 1024 * 1024 },
+    );
+    let Ok(mut reader) = decoder.read_info() else {
+        return false;
+    };
+    let info = reader.info();
+    if info.width == 0
+        || info.width > 256
+        || info.width != info.height
+        || info.animation_control.is_some()
+    {
+        return false;
+    }
+    let Some(size) = reader.output_buffer_size().filter(|n| *n <= 1024 * 1024) else {
+        return false;
+    };
+    reader.next_frame(&mut vec![0; size]).is_ok() && reader.finish().is_ok()
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ResponseTimeout {
-    pub field: String,
+    /// Optional integer field that lets the user change the budget; without one the
+    /// action always has `default_seconds`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
     pub default_seconds: u32,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,10 +134,36 @@ pub struct Field {
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum FieldKind {
     Boolean,
-    Integer { min: i64, max: i64 },
-    Text { max_bytes: usize },
-    Choice { options: Vec<String> },
-    DynamicChoice { depends_on: Vec<String> },
+    Integer {
+        min: i64,
+        max: i64,
+    },
+    Text {
+        max_bytes: usize,
+    },
+    Choice {
+        #[serde(serialize_with = "fixed_options")]
+        options: Vec<ChoiceOption>,
+    },
+    DynamicChoice {
+        depends_on: Vec<String>,
+    },
+}
+/// A fixed option whose label is its value keeps the plain form older readers expect.
+fn fixed_options<S: serde::Serializer>(
+    options: &[ChoiceOption],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeSeq;
+    let mut seq = serializer.serialize_seq(Some(options.len()))?;
+    for option in options {
+        if option.label == option.value {
+            seq.serialize_element(&option.value)?;
+        } else {
+            seq.serialize_element(option)?;
+        }
+    }
+    seq.end()
 }
 
 pub(crate) fn identifier(s: &str) -> bool {
@@ -147,6 +227,37 @@ impl Manifest {
         {
             return Err(Error::InvalidManifest);
         }
+        if self.actions.iter().any(|d| !d.states.is_empty())
+            || self.visuals.iter().any(|d| d.visual.is_some())
+            || (!crate::supports(&self.capabilities, crate::VISUAL_STATES)
+                && self
+                    .actions
+                    .iter()
+                    .chain(&self.visuals)
+                    .any(|d| d.visual.is_some() || !d.states.is_empty()))
+        {
+            return Err(Error::InvalidManifest);
+        }
+        for action in &self.actions {
+            if let Some(id) = &action.visual {
+                let visual = self
+                    .visuals
+                    .iter()
+                    .find(|v| &v.id == id)
+                    .ok_or(Error::InvalidManifest)?;
+                if visual.states.len() != 2
+                    || visual.schema.fields.iter().any(|field| {
+                        !action.schema.fields.iter().any(|a| {
+                            a.id == field.id
+                                && a.kind == field.kind
+                                && (!field.required || a.required)
+                        })
+                    })
+                {
+                    return Err(Error::InvalidManifest);
+                }
+            }
+        }
         let slots = self.credential_slots();
         if slots.len() > 32
             || (!slots.is_empty() && !crate::supports(&self.capabilities, crate::CREDENTIALS))
@@ -176,9 +287,28 @@ impl Manifest {
                 schema: schema.clone(),
                 gestures: default_gestures(),
                 credential_slots: vec![],
+                states: vec![],
+                visual: None,
                 response_timeout: None,
             }
             .validate()?;
+        }
+        if (self.labelled_options() || !self.translations.is_empty())
+            && !crate::supports(&self.capabilities, crate::LABELS)
+        {
+            return Err(Error::InvalidManifest);
+        }
+        if self.translations.len() > 16
+            || self.translations.iter().any(|(language, texts)| {
+                !(2..=3).contains(&language.len())
+                    || !language.bytes().all(|b| b.is_ascii_lowercase())
+                    || texts.len() > 512
+                    || texts
+                        .iter()
+                        .any(|(text, translated)| !label(text) || !label(translated))
+            })
+        {
+            return Err(Error::InvalidManifest);
         }
         crate::bounded::json(self, 65536)?;
         if self.host_min.max(HOST_API_MIN) > self.host_max.min(host_api) {
@@ -191,6 +321,27 @@ impl Manifest {
     }
 }
 impl Manifest {
+    /// `text` as the plugin writes it for `language`, or the text itself when the plugin
+    /// brings no translation for it.
+    pub fn translate<'a>(&'a self, language: &str, text: &'a str) -> &'a str {
+        self.translations
+            .get(language)
+            .and_then(|texts| texts.get(text))
+            .map_or(text, String::as_str)
+    }
+    /// Some fixed option shows the user a text other than its stored value.
+    fn labelled_options(&self) -> bool {
+        self.actions
+            .iter()
+            .chain(&self.visuals)
+            .map(|d| &d.schema)
+            .chain(&self.settings)
+            .flat_map(|schema| &schema.fields)
+            .any(|field| match &field.kind {
+                FieldKind::Choice { options } => options.iter().any(|o| o.label != o.value),
+                _ => false,
+            })
+    }
     /// API used with this plugin: the newest both sides speak. Meaningful for a
     /// manifest that `validate` accepted against the same `host_api`.
     /// Union of slots this process is allowed to receive, in canonical ASCII order.
@@ -212,9 +363,10 @@ impl Definition {
         Ok(match &self.response_timeout {
             None => 5000,
             Some(timeout) => {
-                parameters
-                    .values
-                    .get(&timeout.field)
+                timeout
+                    .field
+                    .as_ref()
+                    .and_then(|field| parameters.values.get(field))
                     .and_then(serde_json::Value::as_u64)
                     .unwrap_or(u64::from(timeout.default_seconds))
                     * 1000
@@ -251,7 +403,9 @@ impl Definition {
                 .then(|| fields.iter().find(|f| &f.id == key).map(|f| &f.kind))
                 .flatten();
             let valid = match (kind, value.as_str()) {
-                (Some(FieldKind::Choice { options }), Some(s)) => options.iter().any(|o| o == s),
+                (Some(FieldKind::Choice { options }), Some(s)) => {
+                    options.iter().any(|o| o.value == s)
+                }
                 (Some(FieldKind::DynamicChoice { .. }), Some(s)) => label(s),
                 _ => false,
             };
@@ -261,7 +415,31 @@ impl Definition {
         }
         Ok(())
     }
+    /// Whether a reply names a state declared by this visual (legacy replies may omit it).
+    pub fn accepts_state(&self, state: &crate::VisualState) -> bool {
+        match state {
+            crate::VisualState::Unavailable => true,
+            crate::VisualState::Current { content } | crate::VisualState::Stale { content } => {
+                content
+                    .state
+                    .as_ref()
+                    .is_none_or(|id| self.states.iter().any(|s| &s.id == id))
+            }
+        }
+    }
     pub fn validate(&self) -> Result<(), Error> {
+        if self.visual.as_deref().is_some_and(|id| !identifier(id))
+            || (!self.states.is_empty()
+                && (self.states.len() != 2
+                    || !unique(self.states.iter().map(|s| s.id.as_str()))
+                    || self.states.iter().any(|s| {
+                        !identifier(&s.id)
+                            || !label(&s.label)
+                            || s.icon.as_deref().is_some_and(|icon| !valid_icon(icon))
+                    })))
+        {
+            return Err(Error::InvalidManifest);
+        }
         if self.gestures.is_empty()
             || self.gestures.len() > 3
             || self
@@ -285,10 +463,12 @@ impl Definition {
         }
         if let Some(timeout) = &self.response_timeout
             && (!(1..=120).contains(&timeout.default_seconds)
-                || !self.schema.fields.iter().any(|f| {
-                    f.id == timeout.field
-                        && !f.required
-                        && matches!(f.kind, FieldKind::Integer { min: 1, max: 120 })
+                || timeout.field.as_ref().is_some_and(|field| {
+                    !self.schema.fields.iter().any(|f| {
+                        &f.id == field
+                            && !f.required
+                            && matches!(f.kind, FieldKind::Integer { min: 1, max: 120 })
+                    })
                 }))
         {
             return Err(Error::InvalidManifest);
@@ -321,8 +501,8 @@ impl Definition {
                 FieldKind::Choice { options } => {
                     !options.is_empty()
                         && options.len() <= 64
-                        && options.iter().all(|s| label(s))
-                        && unique(options.iter().map(String::as_str))
+                        && options.iter().all(|o| label(&o.value) && label(&o.label))
+                        && unique(options.iter().map(|o| o.value.as_str()))
                 }
             };
             if !valid {
@@ -362,14 +542,32 @@ impl<'de> Deserialize<'de> for FieldKind {
             Boolean {},
             Integer { min: i64, max: i64 },
             Text { max_bytes: usize },
-            Choice { options: Vec<String> },
+            Choice { options: Vec<FixedOption> },
             DynamicChoice { depends_on: Vec<String> },
+        }
+        /// A plain value, or a value with the text the user reads (`labels` capability).
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum FixedOption {
+            Plain(String),
+            Labelled(ChoiceOption),
         }
         Ok(match Strict::deserialize(deserializer)? {
             Strict::Boolean {} => Self::Boolean,
             Strict::Integer { min, max } => Self::Integer { min, max },
             Strict::Text { max_bytes } => Self::Text { max_bytes },
-            Strict::Choice { options } => Self::Choice { options },
+            Strict::Choice { options } => Self::Choice {
+                options: options
+                    .into_iter()
+                    .map(|option| match option {
+                        FixedOption::Plain(value) => ChoiceOption {
+                            label: value.clone(),
+                            value,
+                        },
+                        FixedOption::Labelled(option) => option,
+                    })
+                    .collect(),
+            },
             Strict::DynamicChoice { depends_on } => Self::DynamicChoice { depends_on },
         })
     }

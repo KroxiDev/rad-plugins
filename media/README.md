@@ -1,105 +1,104 @@
-# Media plugin
+# Plugin de multimedia
 
-Controls a media player (play, pause, play/pause, stop, previous, next) and shows what it is
-playing: the cover when the player offers one, otherwise its state. It talks to players through
-[MPRIS](https://specifications.freedesktop.org/mpris/latest/Player_Interface.html) on the session
-D-Bus. Plugin id `org.rad.media`, version 0.2.0, x86_64 Linux, plugin contract v1.
-See the [contract and author guide](../README.md) for the negotiated capabilities.
+Referencia de la integración oficial para desarrolladores y agentes. Controla un
+reproductor (play, pause, play/pause, stop, previous, next) y muestra lo que reproduce:
+la carátula si está disponible o, en su defecto, el estado. Se comunica mediante
+[MPRIS](https://specifications.freedesktop.org/mpris/latest/Player_Interface.html)
+sobre el D-Bus de sesión. ID `org.rad.media`, versión 0.3.0, Linux x86_64, contrato de
+plugins v1. Las capacidades negociadas están en el
+[contrato y la guía para autores](../README.md).
 
-## Requirements
+## Requisitos
 
-- A session bus, and players that implement MPRIS (their bus name starts with
-  `org.mpris.MediaPlayer2.`). Browsers and most desktop players do. The bus is the one in
-  `DBUS_SESSION_BUS_ADDRESS`; when that is not set, the standard socket `$XDG_RUNTIME_DIR/bus` if it
-  exists. The plugin never starts a bus.
-- GLib and GIO (`libglib-2.0`, `libgio-2.0`); the plugin uses GIO for D-Bus.
+- Un bus de sesión y reproductores que implementen MPRIS (su nombre de bus empieza
+  por `org.mpris.MediaPlayer2.`). Los navegadores y la mayoría de los reproductores
+  de escritorio lo implementan. El bus se obtiene de `DBUS_SESSION_BUS_ADDRESS`;
+  si no está definida, se usa el socket estándar `$XDG_RUNTIME_DIR/bus` si existe.
+  El plugin nunca inicia un bus.
+- GLib y GIO (`libglib-2.0`, `libgio-2.0`); el plugin usa GIO para D-Bus.
 
-The plugin needs nothing else from its environment. If there is no session bus, actions fail with
-`unavailable` and the state shows as unavailable until the bus is back.
+El plugin no requiere nada más del entorno. Si no hay bus de sesión, las acciones
+fallan con `unavailable` y el estado aparece no disponible hasta que vuelva el bus.
 
-## Actions and states
+## Acciones y estados
 
-| Action | Operations | Player |
+| Acción | Operaciones | Reproductor |
 | --- | --- | --- |
-| Media control | play/pause, play, pause, stop, previous, next | an application |
+| Control multimedia | play/pause, play, pause, stop, previous, next | una aplicación |
 
-| State | Shows |
+| Estado | Muestra |
 | --- | --- |
-| Now playing | the cover; without one `Playing` (green), `Paused` (amber) or `Stopped` (grey) |
+| Reproducción actual | carátula; sin ella, `Playing` (verde), `Paused` (ámbar) o `Stopped` (gris) |
 
-The **player** is an application, not one process of it: the application is the part of the player's
-bus name after `org.mpris.MediaPlayer2.` without a trailing `.instance<number>`. Browsers add that
-suffix, so `...brave.instance4242` is `brave`, and still is after the browser restarts. The choices
-are the applications running now, plus Brave and Strawberry marked *(not running)* when they are
-not, so a button can be set up before the player is started.
+El **reproductor** es una aplicación, no uno de sus procesos: corresponde a la
+parte del nombre de bus posterior a `org.mpris.MediaPlayer2.`, quitando el sufijo
+`.instance<number>`. Los navegadores agregan ese sufijo: `...brave.instance4242`
+es `brave` y sigue siéndolo después de reiniciar el navegador. Las opciones son
+las aplicaciones que están ejecutándose, más Brave y Strawberry marcadas como
+*(not running)* cuando no lo están, para configurar un botón antes de iniciarlas.
 
-- A player that is **not running** is never replaced by another: the action fails with
-  `unavailable` and nothing else is touched, and the state shows as unavailable.
-- With **several instances** of one application, the first one found is used: the one whose bus
-  name sorts first as text (`brave.instance10` comes before `brave.instance9`). There is no
-  selector and no error for it.
-- A player that says it cannot do something (`CanPlay`, `CanPause`, `CanGoNext`, `CanGoPrevious`;
-  `CanControl` for stop) is not asked to: the action fails with `incompatible`.
-- A player that does not answer within 3 seconds makes the action fail with `timed_out`, and so
-  does a bus that accepts the connection and never speaks: the 3 seconds are for everything the
-  action does, connecting included. Other actions are not held up.
-- A player that quits while the action is with it makes the action fail with `unavailable`.
-- Asking after a player never starts it: a player that is not running stays not running.
+- Un reproductor **sin ejecutar** nunca se sustituye por otro: la acción falla con
+  `unavailable` sin tocar nada más, y el estado aparece no disponible.
+- Con **varias instancias** de una aplicación se usa la primera encontrada: la de
+  nombre de bus anterior en orden textual (`brave.instance10` va antes que
+  `brave.instance9`). No hay selector ni error por este caso.
+- A un reproductor que declara no poder realizar una operación (`CanPlay`,
+  `CanPause`, `CanGoNext`, `CanGoPrevious`; `CanControl` para stop) no se le pide:
+  la acción falla con `incompatible`.
+- Si el reproductor no responde en 3 segundos, la acción falla con `timed_out`;
+  también si el bus acepta la conexión pero no responde. Los 3 segundos cubren
+  toda la acción, incluida la conexión. Las otras acciones no quedan bloqueadas.
+- Si el reproductor sale durante la acción, esta falla con `unavailable`.
+- Consultar un reproductor nunca lo inicia: si no estaba ejecutándose, sigue así.
 
-The state follows the player: the plugin listens to the bus (a player starting or quitting, a
-player announcing a change) and reads the player again then. Besides that it reads each displayed
-player once every 10 seconds, so that a player that froze and can no longer announce anything is
-shown as stale instead of as what it last said. Every completed source observation
-renews 25-second validity; unchanged content produces a lightweight renewal, never
-a repeated cover. A blocked reader cannot renew cached state. Nothing else is polled. With no state displayed the
-plugin runs no listening thread at all (a second after the last one went away).
+El estado sigue al reproductor: el plugin escucha el bus (inicio o salida de un
+reproductor, o anuncio de un cambio) y vuelve a leerlo. Además, lee cada reproductor
+mostrado una vez cada 10 segundos, para que uno bloqueado que ya no pueda anunciar
+cambios aparezca como stale en vez de conservar como actual lo último que informó.
+Cada observación completada renueva la vigencia por 25 segundos; si el contenido no
+cambió, envía una renovación liviana, nunca repite la carátula. Un lector bloqueado
+no puede renovar el estado almacenado. No se sondea nada más. Sin estados mostrados,
+el plugin no mantiene ningún hilo de escucha (un segundo después de desaparecer el
+último).
 
-## Resources
+## Recursos
 
-The current contract allows 32 subscriptions per plugin, and media bounds its reader
-threads to 32. Demand is shared by source and released with the last consumer.
+El contrato actual permite 32 suscripciones por plugin y multimedia limita sus
+hilos lectores a 32. La demanda se comparte por fuente y se libera con el último
+consumidor.
 
-### Historical measurements (0.1.x, not 0.2.0 acceptance evidence)
+La memoria y los hilos crecen con las aplicaciones mostradas, no con los botones:
+cada aplicación mostrada tiene un hilo lector y todas comparten un monitor del bus.
+La [referencia de rendimiento](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/performance.md#evidencia-y-límites)
+delimita las mediciones disponibles y su alcance. Los valores de compilaciones
+anteriores no son presupuestos vigentes ni prueban la cuota máxima actual.
 
-Memory and threads grow with the number of applications displayed, not with the number of
-buttons: each displayed application has one reader thread, and all of them share one bus monitor.
-The following historical observations came from one machine and one older release
-build, with a small cover on every player. They are not a current performance budget
-or evidence for current maximum supported demand:
+## Límites conocidos
 
-| Displayed | Memory (RSS) | Threads |
-| --- | --- | --- |
-| 3 applications | about 8 MiB | 9 |
-| 8 applications | about 9 MiB | 14 |
-| 64 applications (historical workload, above the current quota) | about 28 MiB | 70 |
+- Una aplicación es un nombre de bus sin el sufijo `.instance<digits>`. Un
+  reproductor que numera instancias de otra forma, como Firefox con
+  `...firefox.instance_1_82`, cuenta como una aplicación por instancia.
+- La carátula se lee cuando el reproductor la anuncia. Si la anuncia antes de
+  terminar de escribirla y no anuncia nada después, se sigue mostrando el estado
+  hasta el anuncio siguiente.
+- Cualquier anuncio de cualquier reproductor provoca una nueva lectura de todas
+  las aplicaciones mostradas; un reproductor muy activo hace que se lean los
+  demás algo más a menudo.
 
-In that historical run, at rest the CPU use was below measurement resolution for a few applications, and about 0.2 % of one
-core with 64. Each further application costs about 0.3 MiB. Decoding a cover of 2048 x 2048 pixels
-(the largest accepted) adds about 24 MiB for a few milliseconds. Current source-observation and quota behavior is verified by isolated fixtures;
-new RSS/PSS/CPU measurements belong to the measurement phase, not this release.
+## Carátulas
 
-## Known limits
+La carátula es el `mpris:artUrl` ofrecido por el reproductor cuando es una URL
+`file://`. No se descarga nada: se ignoran `http(s)` y otras URL y el estado se
+muestra como texto. Solo se lee un archivo regular de hasta 8 MiB, y solo se
+decodifica si es PNG o JPEG de hasta 2048 x 2048 píxeles (el tipo se determina por
+su contenido, no por su nombre). Se escala para caber en 96 x 96 sin deformarlo,
+sobre fondo negro, y se publica como JPEG de hasta 8 KiB.
 
-- An application is a bus name without a trailing `.instance<digits>`. A player that numbers its
-  instances in another way, such as Firefox with `...firefox.instance_1_82`, is one application
-  per instance.
-- A cover is read when the player announces it. A player that announces a cover before it has
-  finished writing the file, and does not announce anything afterwards, keeps showing the state
-  until its next announcement.
-- Any announcement from any player makes every displayed application be read again, so a busy
-  player makes the others get read a little more often.
+## Compilar y empaquetar
 
-## Covers
-
-The cover is the `mpris:artUrl` the player offers, when it is a `file://` URL. Nothing is downloaded:
-`http(s)` and other URLs are ignored and the state shows as text. The file is read only if it is a
-regular file of at most 8 MiB, and decoded only if it is a PNG or JPEG of at most 2048 x 2048
-pixels (the file type is taken from its content, not its name). It is scaled to fit 96 x 96
-without stretching, over a black background, and published as a JPEG of at most 8 KiB.
-
-## Build and package
-
-From the `plugins` directory:
+Desde el directorio `plugins`, con las dependencias ya disponibles. El ejemplo
+escribe un paquete local, no una publicación; para la caché offline y el gate
+completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
 
 ```sh
 cargo build --release -p rad-plugin-media
@@ -107,17 +106,21 @@ cargo run --release -p rad-plugin-sdk --bin radp-pack -- \
     media/manifest.json target/release/rad-plugin-media org.rad.media.radp
 ```
 
-## Tests
+## Pruebas
 
-`cargo test -p rad-plugin-media` never touches a real player or the session bus. It starts a private
-`dbus-daemon` (which must be installed, and so must `touch`) from a minimal configuration of its
-own, and fake players (`examples/fake_player.rs`) on it. The only services that bus can start are
-the ones one test writes for itself, to show that the plugin never starts a player. The fake records
-the calls it gets, answers the MPRIS properties, emits `PropertiesChanged`, and can be told to stop
-answering or to quit at a given moment. If you run a single test target
-(`cargo test --test actions`), build the helper first with `cargo build --examples`.
+`cargo test -p rad-plugin-media` no toca reproductores reales ni el bus de sesión.
+Inicia un `dbus-daemon` privado (debe estar instalado, al igual que `touch`) con una
+configuración mínima propia, y reproductores falsos (`examples/fake_player.rs`)
+sobre ese bus. Los únicos servicios que el bus puede iniciar son los escritos por
+una prueba para demostrar que el plugin nunca inicia un reproductor. El falso
+registra las llamadas, responde propiedades MPRIS, emite `PropertiesChanged` y
+permite dejar de responder o salir en un momento dado. Antes de ejecutar un único
+target (`cargo test --test actions`), compilar el helper con
+`cargo build --examples`. Para el gate completo, seguir
+[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
 
-**Do not run `fake_player` yourself against your own environment.** It registers a fake MPRIS player
-on the bus of `DBUS_SESSION_BUS_ADDRESS`, which would put a player that does not exist on your real
-session bus. For that reason it refuses to start unless `FAKE_PLAYER_PRIVATE_BUS=1` is set, which the
-tests do and which should only be set together with the address of a bus of your own making.
+**No ejecutar `fake_player` contra el entorno personal.** Registra un reproductor
+MPRIS falso en el bus de `DBUS_SESSION_BUS_ADDRESS`, lo que introduciría un
+reproductor inexistente en la sesión real. Por eso rechaza el arranque salvo que
+`FAKE_PLAYER_PRIVATE_BUS=1`; los tests la definen y solo debe usarse junto a la
+dirección de un bus privado creado para la prueba.

@@ -53,7 +53,7 @@ impl Process {
         self.send(
             1,
             json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness"],"host_api":api,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":2,"patch":0}}),
+                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":4,"patch":0}}),
         );
     }
 
@@ -180,7 +180,7 @@ fn the_real_binary_handshakes_and_reports_everything_unavailable_without_a_serve
     assert_eq!(ready["correlation"], json!({"generation":3,"request":1}));
     assert_eq!(
         ready["message"],
-        json!({"kind":"ready","capabilities":["dynamic_options","visual_freshness"],"plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":2,"patch":0}})
+        json!({"kind":"ready","capabilities":["dynamic_options","visual_freshness"],"plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":4,"patch":0}})
     );
 
     plugin.send(

@@ -3,7 +3,7 @@
   "id": "org.rad.media",
   "version": {
     "major": 0,
-    "minor": 2,
+    "minor": 3,
     "patch": 0
   },
   "host_min": 1,
@@ -19,28 +19,46 @@
         "version": 1,
         "fields": [
           {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "play_pause",
-                "play",
-                "pause",
-                "stop",
-                "previous",
-                "next"
-              ]
-            }
-          },
-          {
             "id": "player",
             "label": "Player",
             "required": true,
             "kind": {
               "type": "dynamic_choice",
               "depends_on": []
+            }
+          },
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "play_pause",
+                  "label": "Play or pause"
+                },
+                {
+                  "value": "play",
+                  "label": "Play"
+                },
+                {
+                  "value": "pause",
+                  "label": "Pause"
+                },
+                {
+                  "value": "stop",
+                  "label": "Stop"
+                },
+                {
+                  "value": "previous",
+                  "label": "Previous"
+                },
+                {
+                  "value": "next",
+                  "label": "Next"
+                }
+              ]
             }
           }
         ]
@@ -75,6 +93,23 @@
   "capabilities": [
     "dynamic_options",
     "jpeg",
+    "labels",
     "visual_freshness"
-  ]
+  ],
+  "translations": {
+    "es": {
+      "Media control": "Control multimedia",
+      "Player": "Reproductor",
+      "When pressed": "Al pulsar",
+      "Play or pause": "Reproducir o pausar",
+      "Play": "Reproducir",
+      "Pause": "Pausar",
+      "Stop": "Detener",
+      "Previous": "Anterior",
+      "Next": "Siguiente",
+      "Now playing": "Reproduciendo ahora",
+      "Brave (not running)": "Brave (cerrado)",
+      "Strawberry (not running)": "Strawberry (cerrado)"
+    }
+  }
 }

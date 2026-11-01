@@ -1,35 +1,51 @@
-# RAD plugins
+# Plugins de RAD
 
-The official plugins and SDK live in this workspace so the host and SDK can change
-atomically. Host and SDK use the same [`rad-plugin-contract`](crates/rad-plugin-contract)
-crate; there is no separate SDK definition of the wire types.
+Los plugins oficiales y el SDK viven en este workspace para que el host y el SDK
+puedan cambiar de forma atómica. Ambos usan el mismo crate
+[`rad-plugin-contract`](crates/rad-plugin-contract); el SDK no define por separado
+los tipos del protocolo.
 
-The authoritative documentation for authors is in **[KroxiDev/rad-plugins](https://github.com/KroxiDev/rad-plugins)**:
+La documentación canónica para autores está en
+**[KroxiDev/rad-plugins](https://github.com/KroxiDev/rad-plugins)**:
 
-- [Plugin contract v1](https://github.com/KroxiDev/rad-plugins/blob/main/docs/contract-v1.md)
-- [Author guide](https://github.com/KroxiDev/rad-plugins/blob/main/docs/author-guide.md)
-- [Published packages](https://github.com/KroxiDev/rad-plugins/releases)
+- [Contrato de plugins v1](https://github.com/KroxiDev/rad-plugins/blob/sdk-v0.3.0/docs/contract-v1.md)
+- [Guía para autores](https://github.com/KroxiDev/rad-plugins/blob/sdk-v0.3.0/docs/author-guide.md)
+- [Paquetes publicados](https://github.com/KroxiDev/rad-plugins/releases)
 
-Contract v1 uses a major version and negotiated capabilities, immutable settings
-snapshots, source-observed visual renewal, and bounded nonblocking SDK output.
-The old linear host APIs 2/3 are not contract v1. Use matching host and plugin
-releases; installing a new RAD does not silently update installed packages.
-Previously installed prerelease packages remain read-only inventory until updated:
-their original metadata and previous version are preserved, but their old protocol
-is never executed as contract v1. Package administration remains available.
+Para trabajar en este repositorio, consultar el [índice técnico](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/README.md)
+y la [validación completa](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md). Esta guía describe el workspace de
+extensiones, no define un segundo contrato de plugins.
 
-| Directory | Crate | Integration |
+El contrato v1 usa una versión mayor y capacidades negociadas, capturas inmutables
+de ajustes, renovación de visuales desde la observación de la fuente y salida del
+SDK no bloqueante y acotada. Las antiguas API lineales del host 2/3 no son el
+contrato v1. Usar versiones compatibles del host y los plugins; instalar un RAD
+nuevo no actualiza silenciosamente los paquetes instalados.
+La lista de oficiales del editor
+([official.rs](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/crates/rad-editor/src/official.rs)) indica la release vigente de
+cada uno: publicar una release oficial requiere actualizar su entrada allí.
+Los paquetes prerelease ya instalados permanecen como inventario de solo lectura
+hasta actualizarlos: se conservan sus metadatos originales y su versión anterior,
+pero su protocolo antiguo nunca se ejecuta como contrato v1. La administración de
+paquetes sigue disponible.
+
+| Directorio | Crate | Integración |
 | --- | --- | --- |
-| [`sdk`](sdk) | `rad-plugin-sdk` | Shared contract, handshake, dispatch, bounded output and `radp-pack`. |
-| [`audio`](audio) | `rad-plugin-audio` | Microphone and output audio through `pactl`. |
-| [`media`](media) | `rad-plugin-media` | MPRIS playback and cover art through the session D-Bus. |
-| [`obs`](obs) | `rad-plugin-obs` | OBS actions, dynamic choices and visual state. |
-| [`metrics`](metrics) | `rad-plugin-metrics` | CPU/RAM and NVIDIA GPU/VRAM visual state. |
+| [`sdk`](sdk) | `rad-plugin-sdk` | Contrato compartido, handshake, despacho, salida acotada y `radp-pack`. |
+| [`audio`](audio) | `rad-plugin-audio` | Micrófono y salida de audio mediante `pactl`. |
+| [`media`](media) | `rad-plugin-media` | Reproducción MPRIS y carátulas mediante el D-Bus de sesión. |
+| [`obs`](obs) | `rad-plugin-obs` | Acciones de OBS, opciones dinámicas y estado visual. |
+| [`metrics`](metrics) | `rad-plugin-metrics` | Estado visual de CPU/RAM y GPU/VRAM NVIDIA. |
 
-Fixtures are test instruments, never release artifacts. Tests do not certify real
-hardware, every distribution, or the safety of an arbitrary native plugin.
+Los fixtures son instrumentos de prueba, nunca artefactos de release. Los tests
+no certifican hardware real, todas las distribuciones ni la seguridad de un plugin
+nativo arbitrario.
 
-## Build, test, package
+## Compilar, probar y empaquetar
+
+Desde el directorio `plugins`, con dependencias y herramientas ya disponibles.
+Estos comandos focalizados no sustituyen el gate completo de
+[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md):
 
 ```sh
 cargo build --locked --release --workspace --all-features --bins --examples
@@ -37,22 +53,28 @@ cargo test --locked --release --workspace --all-features
 cargo clippy --locked --release --workspace --all-features --all-targets -- -D warnings
 ```
 
-Audio unit and protocol tests drive a fake `pactl`. The production no-server test
-runs the real `pactl` inside a `bwrap` sandbox with private HOME, runtime, temporary,
-device, network and PID namespaces and read-only system executables/libraries.
-It cannot reach the host audio server. The isolation guard fails closed if the
-required sandbox cannot run. `bwrap`, `pactl` and Linux namespace support must be
-available beforehand; the tests do not install dependencies. The media plugin's
-tests run against a private `dbus-daemon` (it must be installed) with fake MPRIS players, never the
-session bus. OBS tests use synthetic credentials and fake loopback servers on ephemeral ports,
-never an installed OBS instance or its default port. Metrics tests use controlled proc
-files and a fake NVML library, never system sensors or the real driver. Its
-`metrics-fixture` example (feature `test-support`) runs the same plugin/SDK with fixed
-readings and the official manifest; it supports `--licenses`. `test-support` enables fixture constructors and examples;
-it does not change the production OBS endpoint. If you run a single test target (`cargo test --test process`),
-build the helper examples first. With an already populated cache, add `--offline` to these commands.
+Los tests unitarios y de protocolo de audio usan un `pactl` falso. La prueba de
+producción sin servidor ejecuta el `pactl` real dentro de un sandbox `bwrap`, con
+HOME, runtime, temporales y espacios de nombres de dispositivos, red y PID
+privados, y ejecutables y bibliotecas del sistema en solo lectura. No puede
+alcanzar el servidor de audio personal. Si no puede establecer ese aislamiento,
+la prueba falla sin continuar. `bwrap`, `pactl` y los namespaces Linux deben estar
+disponibles de antemano; los tests no instalan dependencias.
+Los tests de multimedia usan un `dbus-daemon` privado (debe estar instalado) con
+reproductores MPRIS falsos, nunca el bus de sesión. Los de OBS usan credenciales
+sintéticas y servidores loopback falsos en puertos efímeros, nunca una instancia
+instalada de OBS ni su puerto predeterminado. Los de métricas usan archivos proc
+controlados y una biblioteca NVML falsa, nunca sensores del sistema ni el driver
+real. Su ejemplo `metrics-fixture` (feature `test-support`) ejecuta el mismo plugin
+y SDK con lecturas fijas y el manifest oficial; admite `--licenses`.
+`test-support` habilita constructores de fixtures y ejemplos; no cambia el endpoint
+de producción de OBS. Antes de ejecutar un único target de tests
+(`cargo test --test process`), compilar los ejemplos auxiliares.
+Con una caché ya poblada, agregar `--offline` a estos comandos. Estos ejemplos no
+autorizan descargas ni la instalación de herramientas por inferencia.
 
-A plugin package (`.radp`) is the manifest and the executable in one file:
+Un paquete de plugin (`.radp`) reúne el manifest y el ejecutable en un archivo.
+El siguiente ejemplo escribe un paquete local; no lo publica:
 
 ```sh
 cargo build --release -p rad-plugin-audio
@@ -60,31 +82,38 @@ cargo run --release -p rad-plugin-sdk --bin radp-pack -- \
     audio/manifest.json target/release/rad-plugin-audio org.rad.audio.radp
 ```
 
-`radp-pack <manifest.json> <executable> <output.radp>` writes the RADP v1 container: `RADP`, the
-format version, the manifest and executable lengths, then the two blobs. The manifest must be
-1 to 65536 bytes and the executable 1 byte to 64 MiB; anything else is refused before it is read.
+`radp-pack <manifest.json> <executable> <output.radp>` escribe el contenedor RADP
+v1: `RADP`, la versión del formato, las longitudes del manifest y del ejecutable,
+y después ambos bloques de bytes. El manifest debe ocupar de 1 a 65536 bytes y el
+ejecutable de 1 byte a 64 MiB; cualquier otro tamaño se rechaza antes de leerlo.
 
-## Licenses and distribution
+## Licencias y distribución
 
-Project code is [MIT licensed](LICENSE). This does **not** relicense dependencies;
-[third-party notices](notices/README.md) preserve their original terms and texts,
-including conservatively retained build/target-specific and Rust library notices.
-The source tree includes those copies. All plugin executables embed all retained
-texts and print them with `--licenses` as their first argument, then exit without
-reading host input or connecting to audio/D-Bus/OBS or loading NVML. The notices therefore travel inside
-the executable even in the two-blob RADP container. Output failure returns a nonzero
-exit code. Keep the include list in `sdk/src/licenses.rs` synchronized when dependencies
-or retained notices change, and verify it against original dependency/toolchain files.
+El código del proyecto tiene [licencia MIT](LICENSE). Esto **no** cambia las
+licencias de las dependencias: las [licencias de terceros](notices/README.md)
+conservan sus términos y textos originales, incluidos los textos específicos de
+build/target y de bibliotecas de Rust retenidos de forma conservadora. El árbol de
+fuentes incluye esas copias. Todos los ejecutables de plugins incorporan los
+textos retenidos y los imprimen cuando `--licenses` es su primer argumento; después
+salen sin leer la entrada del host, conectarse a audio/D-Bus/OBS ni cargar NVML.
+Así esos textos viajan dentro del ejecutable, incluso en el contenedor RADP de dos
+bloques. Un fallo de salida devuelve un código distinto de cero. Mantener la lista
+de inclusiones de `sdk/src/licenses.rs` sincronizada cuando cambien dependencias o
+textos retenidos, y contrastarla con los archivos originales de dependencias y
+toolchain.
 
-GLib/GObject/GIO and the C runtime are dynamically linked system dependencies, not
-bundled copies. `pactl` is a separately installed program, not bundled. Their licenses
-remain applicable; consult the distribution's packages for their source and notices.
-This source documentation is self-contained; using the plugin does not require access
-to a private application repository. A source tree or package prepared locally is not
-proof that a public repository or release has been published.
+GLib/GObject/GIO y el runtime de C son dependencias del sistema enlazadas
+dinámicamente, no copias incluidas. `pactl` es un programa instalado por separado,
+no incluido. Sus licencias siguen siendo aplicables; consultar los paquetes de la
+distribución para obtener sus fuentes y licencias.
+Esta documentación de fuentes es autosuficiente: usar el plugin no requiere
+acceso a un repositorio privado de la aplicación. Un árbol de fuentes o paquete
+preparado localmente no demuestra que se haya publicado un repositorio o release
+públicos.
 
-## Source provenance
+## Procedencia del código
 
-This is a mechanical distribution snapshot, not a second protocol definition.
-See [SOURCE.md](SOURCE.md) for the canonical RAD commit, source hashes and the
-small path-only rebases needed by this standalone workspace. Pin `sdk-v0.2.0`.
+Copia mecánica para distribución, no una segunda definición del protocolo.
+[SOURCE.md](SOURCE.md) indica el commit canónico de RAD, los hashes de las fuentes
+y los pocos ajustes de rutas que necesita este workspace independiente.
+Fijar `sdk-v0.3.0`.

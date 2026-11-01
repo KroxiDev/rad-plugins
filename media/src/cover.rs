@@ -170,6 +170,43 @@ pub(crate) struct Converter {
 }
 
 impl Converter {
+    #[cfg(feature = "fixture-tests")]
+    pub(crate) fn with_fixture_gate(mut gate: std::os::unix::net::UnixStream) -> Self {
+        use std::io::Write;
+        let timeout = Some(std::time::Duration::from_secs(5));
+        let configured = gate
+            .set_read_timeout(timeout)
+            .and_then(|()| gate.set_write_timeout(timeout));
+        let (sender, receiver) = mpsc::sync_channel::<Conversion>(0);
+        let spawned = configured.is_ok()
+            && std::thread::Builder::new()
+                .name("media-cover-fixture".into())
+                .spawn(move || {
+                    let mut first = true;
+                    let mut released = false;
+                    while let Ok((bytes, reply)) = receiver.recv() {
+                        if first {
+                            first = false;
+                            let mut permit = [0];
+                            released = gate
+                                .write_all(b"E")
+                                .and_then(|()| gate.read_exact(&mut permit))
+                                .is_ok()
+                                && permit == *b"R";
+                        }
+                        let result = if released {
+                            convert(&bytes)
+                        } else {
+                            Err(CoverError::Unreadable)
+                        };
+                        let _ = reply.send(result);
+                    }
+                })
+                .is_ok();
+        Self {
+            sender: OnceLock::from(spawned.then_some(sender)),
+        }
+    }
     #[cfg(test)]
     pub(crate) fn stalled() -> (Self, mpsc::Receiver<Conversion>) {
         let (sender, receiver) = mpsc::sync_channel(0);
@@ -204,5 +241,39 @@ impl Converter {
             .send((bytes, reply))
             .map_err(|_| CoverError::Unreadable)?;
         result.recv().map_err(|_| CoverError::Unreadable)?
+    }
+}
+
+#[cfg(all(test, feature = "fixture-tests"))]
+mod fixture_gate_tests {
+    use super::*;
+    use std::{io::Read, os::unix::net::UnixStream, time::Duration};
+
+    #[test]
+    fn fixture_gate_retains_real_conversion_and_controller_drop_releases_it() {
+        let path = std::env::temp_dir().join(format!("rad-cover-gate-{}.png", std::process::id()));
+        image::RgbaImage::from_pixel(2, 2, image::Rgba([80, 40, 20, 255]))
+            .save(&path)
+            .unwrap();
+        let (gate, mut controller) = UnixStream::pair().unwrap();
+        controller
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let converter = Converter::with_fixture_gate(gate);
+        let input = path.clone();
+        let reader = std::thread::spawn(move || converter.jpeg_hex(&input));
+        let mut entered = [0];
+        let observed = controller.read_exact(&mut entered);
+        let retained = !reader.is_finished();
+        drop(controller); // EOF must release the owned fixture even on an assertion failure.
+        let answer = reader.join().unwrap();
+        std::fs::remove_file(path).unwrap();
+        observed.expect("the fixture must announce an accepted conversion before decoding");
+        assert_eq!(entered, [b'E']);
+        assert!(retained, "conversion must remain owned until release/EOF");
+        assert!(
+            answer.is_err(),
+            "controller EOF rejects the held conversion"
+        );
     }
 }

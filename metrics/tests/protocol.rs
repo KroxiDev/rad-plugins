@@ -48,7 +48,7 @@ fn no_blind_renewal_revives_stale_metrics_and_eof_does_not_join_driver() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":3,"patch":0}}),
     );
     let ready = recv(&mut host);
     assert_eq!(ready["message"]["kind"], "ready");

@@ -1,6 +1,6 @@
 # Writing a RAD plugin
 
-For **contract major 1 / SDK 0.2.0**, Linux x86_64. Read the
+For **contract major 1 / SDK 0.3.0**, Linux x86_64. Read the
 [contract](contract-v1.md) first. Plugins are trusted native code, not sandboxed.
 
 ## Obtain the SDK
@@ -9,7 +9,7 @@ Pin a published tag, not `main`:
 
 ```toml
 [dependencies]
-rad-plugin-sdk = { git = "https://github.com/KroxiDev/rad-plugins", tag = "sdk-v0.2.0" }
+rad-plugin-sdk = { git = "https://github.com/KroxiDev/rad-plugins", tag = "sdk-v0.3.0" }
 ```
 
 The tag includes the shared contract and framing crates; Cargo resolves their
@@ -91,6 +91,29 @@ on End. Ordinary invocations and reserved End capacity are separate.
 For dynamic choices, list current choices without invoking the action. Preserve a
 saved missing value, distinguish unavailable from an empty list, and respect the
 query's dependency context. Settings have no dynamic-options query scope in v1.
+
+## Texts and two-state visuals
+
+With `labels`, give fixed options the text users read and add `translations` for
+other languages; keep stored values stable and write labels in English in the
+manifest. Order fixed options so the recommended one comes first: a new required
+choice starts there.
+
+For an on/off source (muted, recording, visible), negotiate `visual_states`,
+declare the visual's two `states` (resting state second) with small, legible
+icons, and link the action that controls it with `"visual"`. Publish the
+observed state on every update:
+
+```rust
+subscription.update(VisualState::Current {
+    content: VisualContent { state: Some("muted".into()), ..VisualContent::default() },
+});
+```
+
+Set `state` from the observation, not from a label or a press count. A host that
+did not negotiate `visual_states` never receives it. Use a fixed
+`response_timeout` (`default_seconds` without `field`) when an action needs more
+than five seconds but users should not tune it.
 
 ## Credentials and diagnostics
 

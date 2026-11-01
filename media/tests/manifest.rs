@@ -15,14 +15,14 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
     assert_eq!(manifest["contract"], 1);
     assert_eq!(manifest["id"], config.id);
     assert_eq!(manifest["id"], "org.rad.media");
-    assert_eq!(manifest["version"], json!({"major":0,"minor":2,"patch":0}));
+    assert_eq!(manifest["version"], json!({"major":0,"minor":3,"patch":0}));
     assert_eq!(
         (
             config.version.major,
             config.version.minor,
             config.version.patch
         ),
-        (0, 2, 0)
+        (0, 3, 0)
     );
     assert_eq!(manifest["host_min"], *config.host_api.start());
     assert_eq!(manifest["host_max"], *config.host_api.end());
@@ -42,8 +42,11 @@ fn the_action_and_the_visual_have_the_documented_fields() {
     let manifest = manifest();
     let player = json!({"id":"player","label":"Player","required":true,
         "kind":{"type":"dynamic_choice","depends_on":[]}});
-    let operation = json!({"id":"operation","label":"Operation","required":true,
-        "kind":{"type":"choice","options":["play_pause","play","pause","stop","previous","next"]}});
+    let option = |value: &str, label: &str| json!({"value":value,"label":label});
+    let operation = json!({"id":"operation","label":"When pressed","required":true,
+        "kind":{"type":"choice","options":[option("play_pause","Play or pause"),
+            option("play","Play"),option("pause","Pause"),option("stop","Stop"),
+            option("previous","Previous"),option("next","Next")]}});
 
     let actions = manifest["actions"].as_array().unwrap();
     assert_eq!(actions.len(), 1);
@@ -53,7 +56,7 @@ fn the_action_and_the_visual_have_the_documented_fields() {
     );
     assert_eq!(
         actions[0]["schema"],
-        json!({"version":1,"fields":[operation, player]})
+        json!({"version":1,"fields":[player, operation]})
     );
     assert_eq!(actions[0]["credential_slots"], json!([]));
 
@@ -74,14 +77,14 @@ fn the_operations_the_manifest_offers_are_the_ones_the_plugin_accepts() {
     let bus = PrivateBus::start();
     let mut player = FakePlayer::start(&bus, "org.mpris.MediaPlayer2.strawberry");
     let mut host = Host::start(Some(bus.address()), quick());
-    let operations = manifest()["actions"][0]["schema"]["fields"][0]["kind"]["options"]
+    let operations = manifest()["actions"][0]["schema"]["fields"][1]["kind"]["options"]
         .as_array()
         .unwrap()
         .clone();
     assert_eq!(operations.len(), 6);
     for operation in &operations {
         assert_eq!(
-            host.invoke(operation.as_str().unwrap(), "strawberry"),
+            host.invoke(operation["value"].as_str().unwrap(), "strawberry"),
             json!({"status":"success"}),
             "{operation}"
         );

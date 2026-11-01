@@ -14,9 +14,9 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
     let config = config();
     assert_eq!(manifest["contract"], 1);
     assert_eq!(manifest["id"], config.id);
-    assert_eq!(manifest["version"], json!({"major":0,"minor":2,"patch":0}));
+    assert_eq!(manifest["version"], json!({"major":0,"minor":4,"patch":0}));
     assert_eq!(config.version.major, 0);
-    assert_eq!((config.version.minor, config.version.patch), (2, 0));
+    assert_eq!((config.version.minor, config.version.patch), (4, 0));
     assert_eq!(manifest["host_min"], *config.host_api.start());
     assert_eq!(manifest["host_max"], *config.host_api.end());
     assert_eq!(manifest["host_min"], 1);
@@ -33,8 +33,9 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
 #[test]
 fn every_definition_has_the_documented_fields() {
     let manifest = manifest();
-    let operation = json!({"id":"operation","label":"Operation","required":true,
-        "kind":{"type":"choice","options":["toggle","mute","unmute"]}});
+    let operation = json!({"id":"operation","label":"When pressed","required":true,
+        "kind":{"type":"choice","options":[{"value":"toggle","label":"Toggle"},
+            {"value":"mute","label":"Mute"},{"value":"unmute","label":"Unmute"}]}});
     let device = json!({"id":"device","label":"Device","required":true,
         "kind":{"type":"dynamic_choice","depends_on":[]}});
     let labels = [
@@ -56,7 +57,8 @@ fn every_definition_has_the_documented_fields() {
         assert_eq!(definition["credential_slots"], json!([]));
         assert_eq!(definition["schema"]["version"], 1);
         let expected = if category == "actions" {
-            json!([operation, device])
+            // The device first: the operation starts on Toggle.
+            json!([device, operation])
         } else {
             json!([device])
         };
@@ -74,10 +76,11 @@ fn the_values_the_manifest_offers_are_the_ones_the_plugin_accepts() {
     // options for exactly the declared definitions and field.
     let server = FakeServer::new();
     let mut host = Host::start(&server, quick());
-    for operation in manifest()["actions"][0]["schema"]["fields"][0]["kind"]["options"]
+    for operation in manifest()["actions"][0]["schema"]["fields"][1]["kind"]["options"]
         .as_array()
         .unwrap()
     {
+        let operation = &operation["value"];
         let outcome = host.invoke("output", operation.as_str().unwrap(), "@default");
         assert_eq!(outcome, json!({"status":"success"}), "{operation}");
     }

@@ -75,7 +75,7 @@ fn two_consumers_share_demand_and_last_release_reaches_reader_before_fresh_resub
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":2,"patch":0}}),
+        json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":3,"patch":0}}),
     );
     assert_eq!(receive(&mut host, 1)["message"]["kind"], "ready");
     subscribe(&mut host, 2);

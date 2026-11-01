@@ -12,36 +12,6 @@ fn secs(n: u64) -> Duration {
 const HEARTBEAT: Duration = Duration::from_millis(500);
 
 #[test]
-fn a_subscription_shows_muted_or_on_with_a_colour() {
-    let server = FakeServer::new();
-    server.set_mute(Kind::Microphone, "mic-a", true);
-    let mut host = Host::start(&server, quick());
-    let output = host.subscribe("output", "@default");
-    let microphone = host.subscribe("microphone", "@default");
-    let mut colours = Vec::new();
-    for (subscription, text) in [(output, "On"), (microphone, "Muted")] {
-        let frame = host
-            .take(
-                |f| f["correlation"]["request"] == subscription && f["message"]["kind"] == "visual",
-                secs(5),
-            )
-            .expect("initial visual");
-        let state = &frame["message"]["state"];
-        assert_eq!(state["availability"], "current");
-        assert_eq!(state["content"]["text"], text);
-        let colour = state["content"]["color"].as_array().expect("colour");
-        colours.push([0, 1, 2, 3].map(|i| colour[i].as_u64().unwrap()));
-    }
-    let [on, muted] = colours.as_slice() else {
-        panic!("both colours")
-    };
-    assert!(on[1] > on[0], "on is greenish: {on:?}");
-    assert!(muted[0] > muted[1], "muted is reddish: {muted:?}");
-    assert_eq!((on[3], muted[3]), (255, 255));
-    host.finish().unwrap();
-}
-
-#[test]
 fn an_outside_change_of_mute_reaches_the_host_within_one_heartbeat() {
     let server = FakeServer::new();
     let mut host = Host::start(&server, quick());

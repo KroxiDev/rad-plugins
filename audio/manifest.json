@@ -3,7 +3,7 @@
   "id": "org.rad.audio",
   "version": {
     "major": 0,
-    "minor": 2,
+    "minor": 4,
     "patch": 0
   },
   "host_min": 1,
@@ -19,19 +19,6 @@
         "version": 1,
         "fields": [
           {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "toggle",
-                "mute",
-                "unmute"
-              ]
-            }
-          },
-          {
             "id": "device",
             "label": "Device",
             "required": true,
@@ -39,13 +26,36 @@
               "type": "dynamic_choice",
               "depends_on": []
             }
+          },
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "mute",
+                  "label": "Mute"
+                },
+                {
+                  "value": "unmute",
+                  "label": "Unmute"
+                }
+              ]
+            }
           }
         ]
       },
       "credential_slots": [],
       "gestures": [
         "press"
-      ]
+      ],
+      "visual": "output"
     },
     {
       "id": "microphone",
@@ -54,19 +64,6 @@
         "version": 1,
         "fields": [
           {
-            "id": "operation",
-            "label": "Operation",
-            "required": true,
-            "kind": {
-              "type": "choice",
-              "options": [
-                "toggle",
-                "mute",
-                "unmute"
-              ]
-            }
-          },
-          {
             "id": "device",
             "label": "Device",
             "required": true,
@@ -74,13 +71,36 @@
               "type": "dynamic_choice",
               "depends_on": []
             }
+          },
+          {
+            "id": "operation",
+            "label": "When pressed",
+            "required": true,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "toggle",
+                  "label": "Toggle"
+                },
+                {
+                  "value": "mute",
+                  "label": "Mute"
+                },
+                {
+                  "value": "unmute",
+                  "label": "Unmute"
+                }
+              ]
+            }
           }
         ]
       },
       "credential_slots": [],
       "gestures": [
         "press"
-      ]
+      ],
+      "visual": "microphone"
     }
   ],
   "visuals": [
@@ -101,7 +121,19 @@
           }
         ]
       },
-      "credential_slots": []
+      "credential_slots": [],
+      "states": [
+        {
+          "id": "muted",
+          "label": "Muted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000039504c5445000000151922161a22151922151922151822151a221519228c444fdd616ded6673af505b241e28733b45502e38cf5b6833242d813f4bbb5460061aa07b0000000774524e53002ea4d8f456fa0dc11ce2000002d54944415468deed9ad992ac200c405d074470fbff8fbd8e36984050415375a766f2d645970712b210280a2b6555d58d78419abaaacac297b616af4adda2cf972f7f7e438055948d6090c611ca2fc1225f25e7fcc11a6ac126f5b67f04a3b4bc0bd896500a56298b8a1750f1036a5e405d34bc80a610ccf207f84f01b2eb242740aa557a4640a75e24c4012f11a22a3a236863f42323f7e784615de2a86f22e96d7a4a30db9041df1f57e494e20727848f02e78039ea14478b11b41d08013421eac934611a1505d0fbc65b92420545183a4502c4b40fc8a45814128c521180459ba460e7133ee6ed160220867d6c4a8aa688a097fdc738cd14c01a3a2d5c038235efa20500400793a4922ef2812358f37e9bf1006007dba6d0e9b484d32b24dbfc0e0076b081da4997190d12ba41108063fbef4a9aee0056dd5a71aee594015484b7fffe53de00e84e85e2b40b8cfc71b001ee246c051a6014257d08b0db5fc35c65ae01b33a23203f30484932084949800f013b5a0f97306d7fd3f7008b7462904f63c084fc6b8426b900ccb1a8e18d22b5487f1fdd054082378ad462fc087f1b0008fe2854cbe447bcfb808320bdd11e18416f26cf0338c2e88d4a68e5ed1f99001497580090c0a1224460303226c8d7b7a96fe9e78eb61c390156b67ead911f2a5498cb28427eb023b23198a525e4856b2ae1c8e080f24dc84c387aa492810ed667ab99e494b9267d096424923eb5b8fb493fb23761d90224a76c8919e528bc4035f3acf0f24e06ae7494cea79f958ec1d9e6287ee9ea3eb1f885760fca774cc82adfc9f3e571008184ac03c899ffcd386a641da1e2a676b1d612969c43e099a95d30ef498778d0f10a0ee280907610bf32f51ce4b8b456c2a5a94d901f96d79a827e3be7b43793d575f4bb437d9032de6e6bda68cbd737edb9013b413202a2cddcbfe6f86f00b05f12b15f73fdf49bc096ffb294fdba97ffc29afdca9dffd100fbb307fe871bfc4f4ff81fcfbcfdfca73d66ff0fcf190f6c3dd7f65f0000000049454e44ae426082"
+        },
+        {
+          "id": "unmuted",
+          "label": "Unmuted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a0000003c504c5445000000151922151822222730151922151922151a221519221e222c48505d343a458b98aa95a2b5818d9e282d375a6371545c6a707b8b7a8596636c7b0d98f57b0000000774524e53002e56b8d8f4faa9758933000002024944415468deed9aeb9283200c85c5cb265cbdbdffbbee8aa5054bbbae723ab3339e7fd60e1f24c100a1aa8244ddb41d1550d736b5a8b6aa5b2aaab64e9a17859bf7886814a22380ba3b417c11445f02d9ff680c2dc1d4faf821a06aec00fc10044125b0165a6cd460010dd6058b133a2ca0ab08ac0b70012ec041004bc94880d2c658de893c009066914cdab7c6685708d0fbf6cdf0c4b45c02c0a3790530139f07386b7200d6feb7f13440699305905b5fcc2701d29817804090a700f3dab49e320052eb3b771c10dc6bdd900304471f0604f78e4c11209e6073ce74bb01c1bd8b1b1f807482f92e683e04186eae9594006412fe2a1749fb0037f36b4519c023fcd749eef600580e91a6e05eda00380dfff571de01606b9e35326d0121fc551c49a917aa5f6754509f3a6448c23fb4a99f665bf5d6a791246501b7bef4b117a60300ade805600d803004e7ffcdfb00537f579aae52804b0668b7367a0318de4e8a21cd4053fcd09705246691dbbc5000b09a4545345b1830477667eff2c2803e7ef6f6fa6f00b889d04e8687e9e189363e1202e65301ffd8213fd7f084034f993f49bf8f543ee9e3972d9f5e78e1978ef8c52f7ef98edf807c600b85df04e2b7b1f88d38fe28e1038721f8e31cfc81d4752878012ec05f01f02211bccc052fd4c14b8df06229bcdc8b2f58c34beef84b03f06b0ff88b1bf8ab27f8cb33c0eb3fdf73dd12231526f0110000000049454e44ae426082"
+        }
+      ]
     },
     {
       "id": "microphone",
@@ -120,11 +152,41 @@
           }
         ]
       },
-      "credential_slots": []
+      "credential_slots": [],
+      "states": [
+        {
+          "id": "muted",
+          "label": "Muted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000039504c5445000000151922161a22151922151922151822151a2215192237252f542f39753b468e444fdd616ded6673251e28ae505bd05c68813f4bbb5460dbdbdc8a0000000774524e53002ea4d8f456fa0dc11ce2000002db4944415468dee59a5992e3200c40bda5596d03f73fec24608320780354355dadbf04971e482089a5eb76e987619c480399c661e8bb545e23692ae32b52df37566f116014fd441064f284fe87a0c84f8fd97f308691a0c968e70f419417ee00ec107a822a7d37e002067cc0880b18bb091730750459fe1a8032ce19c5025021672b52d04a809052a4ff2deb0c442c3500f151b126dd5773248a56009c25220295732292d6022061d9fa2f5721d6ad592d75268a08ee1fc9dd2fee10a2dcc96b42a089d93787d0f2699a10446a74e71251b10e628255c7613bb7c89a85060934a34ddeb5d1e14a0604965917b69955858a40e019838b2fab3d8f459e6095e9b851dff5f259b0db090a0b40607ccb017475b85eb10180800408048104089ec6027c45bee6803ca12580a80ca129604f4090d014a0e76f4213c0c2f91203022100f6af9e033e99de667600f0040ff05f3d07f03d226b1ff102c103f845dcee2e4caf7de48c676bdca81b0074bc1e300011a129c0a74c4010918374b9933f7a43d20f049ff445b9933d00942d9ee0cb960a40e83828bc60169577ea971300f56900968e80207c24a465a1c257b851f11b08a1a93016196f99a87c8f729c7594290468af26b70171fe515715de19c00d9fe5b7508ec02e370aa7f9c0846c9f6e023782bab2d0398081826511d12613fe60e519cd4005d1461ccc565391329d1724cb1c25c4b3b53827f384705d9115968ee25ead5100d857804a06c154a612282a5b76c2ac78d8277395ac8726a5e39bf15ec8efa51cb4cb6bc29dc28bcf07c20f2ae3c70752d4e4d41b7a587b3f3ff1625f08c3ceaafb822335ca01c304875f111e1d0a52ab6ca577762865a78ef91ae594d002e009020bb013241a60231402de3b8c5d8c9b425e96985066a245cd8702761eb9c3dc7b003e9fc8f589d17f00b869a28a58b4707120fcc6e12ffe0505fa2511fa35d76fbf097ce15f96a25ff7e25f58a35fb9e33f1a407ff680ff7003ffe909fee399d6cf7f5ea1f7ff007fa01c3e8c7903480000000049454e44ae426082"
+        },
+        {
+          "id": "unmuted",
+          "label": "Unmuted",
+          "icon": "89504e470d0a1a0a0000000d4948445200000060000000600803000000d546870a00000039504c5445000000151922151822151922151922151a22151922333944474f5c545c6a292f39656e7d8a97a995a2b51e222c818c9d707a8a5a63717b86975b20cdf50000000674524e53002e56d8f4fa50139db9000002454944415468deed9ad9b683200c4555bc184019fcff8fbd2d3857013579e8aae7adb4cd8630240c4531aaac18ab39826ac6aab2d8aa621c55ac5a992f91cd7bc4a21565cd09544f84f28f93e8afa4acffa20d8c9389f9f1c30955d136c037a1e4a42a693df4f611a305307a404d0ba80b4eac5f03342004345400a9daceab559200a055b790d2d80069ba958cc405c8b6dba89598003dd4bfb5ced98165342220f8bf85f0090242e101e4c6ed4387483480da3a3d748942037873b02c018fc402343bd63cb34102f8eada7599fd68d40d80781b73eb32f72e139800912e7b000fe0013c000a8006d069c0f8abf38077a4f7913d0a987e751e00e3921f054022301419ae8f02529df14380a3907917e05241df5d07c00888a62deafa289a2b1e4bbcec75809c8cc452c73691a5c6968a29c38d24bfe1ab8b6b513ff5df71fa2e76064036c0ffd9c4372026b5aa16c96d01c4b65090dc2844e3819d9a70b40934290fc5017e020c7378771beb67593c8b8f4734bb34f0b9110f15b0374266e885b98aeba384603fb1552b32c2f1811306fbe25ed00f4edaaea5b3ff130e4a03743f8c9a4d23601855bdbe0998089d11f35221c6419bb49f9117693b4f2eab9c53769e74367d9c909d78ed092bb3e3d2ee99b7784709af21f981b099276bd9275e52f4b3f55e641faa9d3a140caeb2f2cc7fce9d3a66e7d40f0017a05f6bf4a0d0c9d347d018006dba43198ca502ba88e01b00e42e7a75b23b104e27df14fd25d1f7dfa3915f35925f96925ff7d25f58935fb9d33f1a207ff640ff7083fee909fde319c2e73fff4de3f27c07e0acf90000000049454e44ae426082"
+        }
+      ]
     }
   ],
   "capabilities": [
     "dynamic_options",
-    "visual_freshness"
-  ]
+    "labels",
+    "visual_freshness",
+    "visual_states"
+  ],
+  "translations": {
+    "es": {
+      "Audio output": "Salida de audio",
+      "Microphone": "Micrófono",
+      "Device": "Dispositivo",
+      "When pressed": "Al pulsar",
+      "Toggle": "Alternar",
+      "Mute": "Silenciar",
+      "Unmute": "Activar sonido",
+      "Audio output state": "Estado de la salida de audio",
+      "Microphone state": "Estado del micrófono",
+      "Default device (follows changes)": "Dispositivo predeterminado (sigue los cambios)",
+      "Muted": "Silenciado",
+      "Unmuted": "Con sonido"
+    }
+  }
 }

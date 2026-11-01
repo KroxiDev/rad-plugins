@@ -84,6 +84,7 @@ impl Sample {
         ]
         .map(|text| {
             text.map(|text| VisualContent {
+                state: None,
                 text: Some(text),
                 ..Default::default()
             })

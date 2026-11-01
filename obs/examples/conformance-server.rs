@@ -9,6 +9,10 @@ struct Model {
     record: bool,
     paused: bool,
     stream: bool,
+    muted: bool,
+    virtualcam: bool,
+    replay: bool,
+    replays: u32,
 }
 const REQUESTS: &[&str] = &[
     "GetVersion",
@@ -33,6 +37,16 @@ const REQUESTS: &[&str] = &[
     "ResumeRecord",
     "StartStream",
     "StopStream",
+    "GetInputMute",
+    "SetInputMute",
+    "GetVirtualCamStatus",
+    "StartVirtualCam",
+    "StopVirtualCam",
+    "GetReplayBufferStatus",
+    "StartReplayBuffer",
+    "StopReplayBuffer",
+    "SaveReplayBuffer",
+    "GetLastReplayBufferReplay",
 ];
 impl Model {
     fn request(&mut self, kind: &str, data: &Value) -> Result<Value, ()> {
@@ -111,6 +125,29 @@ impl Model {
             "StopStream" => {
                 self.stream = false;
                 json!({})
+            }
+            "GetInputMute" if data["inputName"] == "Camera" => json!({"inputMuted":self.muted}),
+            "SetInputMute" if data["inputName"] == "Camera" => {
+                self.muted = data["inputMuted"].as_bool().ok_or(())?;
+                json!({})
+            }
+            "GetVirtualCamStatus" => json!({"outputActive":self.virtualcam}),
+            "StartVirtualCam" | "StopVirtualCam" => {
+                self.virtualcam = kind.starts_with("Start");
+                json!({})
+            }
+            "GetReplayBufferStatus" => json!({"outputActive":self.replay}),
+            "StartReplayBuffer" | "StopReplayBuffer" => {
+                self.replay = kind.starts_with("Start");
+                json!({})
+            }
+            "SaveReplayBuffer" if self.replay => {
+                self.replays += 1;
+                json!({})
+            }
+            // Like OBS, there is no last replay before the first one is saved.
+            "GetLastReplayBufferReplay" if self.replays > 0 => {
+                json!({"savedReplayPath":format!("/replays/{}.mkv", self.replays)})
             }
             _ => return Err(()),
         };

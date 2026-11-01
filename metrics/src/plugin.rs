@@ -11,12 +11,12 @@ pub fn config() -> Config {
         "org.rad.metrics",
         Version {
             major: 0,
-            minor: 2,
+            minor: 3,
             patch: 0,
         },
         1..=1,
     )
-    .capabilities(vec!["visual_freshness".into()])
+    .capabilities(vec!["labels".into(), "visual_freshness".into()])
 }
 const SOURCES: [&str; 4] = ["cpu", "ram", "gpu", "vram"];
 struct Shared {

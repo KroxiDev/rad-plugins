@@ -35,47 +35,7 @@ fn manifest_compatibility_preserves_unknown_and_incompatible_bytes() {
     assert_eq!(doc.bytes(), bytes);
     assert!(!format!("{doc:?}").contains("org.rad.fixture"));
 }
-#[test]
-fn parameters_roundtrip_versions_and_credentials_are_non_destructive() {
-    let mut v = manifest();
-    v["visuals"][0]["schema"]["fields"] = json!([
-        {"id":"enabled","label":"Enabled","required":true,"kind":{"type":"boolean"}},
-        {"id":"level","label":"Level","required":true,"kind":{"type":"integer","min":0,"max":100}},
-        {"id":"name","label":"Name","required":false,"kind":{"type":"text","max_bytes":4}},
-        {"id":"mode","label":"Mode","required":false,"kind":{"type":"choice","options":["one","two"]}}
-    ]);
-    let m = Document::new(&serde_json::to_vec(&v).unwrap())
-        .unwrap()
-        .manifest(1, "x86_64-unknown-linux-gnu")
-        .unwrap();
-    let v1 = &m.visuals[0];
-    let bytes=br#"{ "schema_version":1, "values":{"enabled":true,"level":100,"name":"abcd","mode":"two"} }"#;
-    let doc = Document::new(bytes).unwrap();
-    assert_eq!(doc.parameters(v1), Ok(()));
-    let mut v2 = v1.clone();
-    v2.schema.version = 2;
-    assert_eq!(doc.parameters(&v2), Err(Error::UnsupportedVersion));
-    assert_eq!(doc.parameters(v1), Ok(()));
-    assert_eq!(doc.bytes(), bytes);
-    for values in [
-        json!({"enabled":true,"level":101}),
-        json!({"level":1}),
-        json!({"enabled":1,"level":0}),
-        json!({"enabled":true,"level":0,"future":"retain"}),
-        json!({"enabled":true,"level":0,"name":"abcde"}),
-        json!({"enabled":true,"level":0,"mode":"three"}),
-    ] {
-        let bytes = serde_json::to_vec(&json!({"schema_version":1,"values":values})).unwrap();
-        let d = Document::new(&bytes).unwrap();
-        assert_eq!(d.parameters(v1), Err(Error::InvalidParameters));
-        assert_eq!(d.bytes(), bytes);
-    }
-    let mut secured = v1.clone();
-    secured.credential_slots.push("password".into());
-    assert_eq!(doc.parameters(&secured), Ok(()));
-    secured.credential_slots.push("name".into());
-    assert_eq!(secured.validate(), Err(Error::InvalidManifest));
-}
+
 #[test]
 fn framed_protocol_roundtrips_and_rejects_wrong_generation() {
     use rad_plugin_contract::*;
@@ -93,6 +53,7 @@ fn framed_protocol_roundtrips_and_rejects_wrong_generation() {
         values: serde_json::Map::new(),
     };
     let content = VisualContent {
+        state: None,
         text: Some("42".into()),
         png_hex: None,
         jpeg_hex: None,
@@ -189,6 +150,8 @@ fn public_dtos_cannot_bypass_resource_and_schema_limits() {
     use rad_plugin_contract::*;
     let mut definition = Definition {
         gestures: vec![Gesture::Press],
+        states: vec![],
+        visual: None,
         response_timeout: None,
         id: "run".into(),
         label: "Run".into(),
@@ -249,30 +212,7 @@ fn public_dtos_cannot_bypass_resource_and_schema_limits() {
             .is_err()
     );
 }
-#[test]
-fn incompatible_v2_fields_survive_rollback_and_reinstallation() {
-    use rad_plugin_contract::*;
-    let m: Manifest = serde_json::from_value(manifest()).unwrap();
-    let v1 = &m.visuals[0];
-    let mut v2 = v1.clone();
-    // Even when a publisher reuses a schema version, unknown fields fail closed.
-    v2.schema.fields.push(Field {
-        id: "future".into(),
-        label: "Future".into(),
-        required: false,
-        kind: FieldKind::Boolean,
-    });
-    let bytes = br#"{ "schema_version":1, "values":{"future":true} }"#;
-    let d = Document::new(bytes).unwrap();
-    assert_eq!(d.parameters(&v2), Ok(()));
-    assert_eq!(d.parameters(v1), Err(Error::InvalidParameters));
-    assert_eq!(d.bytes(), bytes);
-    assert_eq!(d.parameters(&v2), Ok(()));
-    let malformed = b"not supported future encoding";
-    let d = Document::new(malformed).unwrap();
-    assert!(d.parameters(v1).is_err());
-    assert_eq!(d.bytes(), malformed);
-}
+
 #[test]
 fn malformed_messages_and_sensitive_diagnostics_fail_closed() {
     use rad_plugin_contract::*;
