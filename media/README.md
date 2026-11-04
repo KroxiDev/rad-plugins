@@ -69,7 +69,7 @@ consumidor.
 
 La memoria y los hilos crecen con las aplicaciones mostradas, no con los botones:
 cada aplicación mostrada tiene un hilo lector y todas comparten un monitor del bus.
-La [referencia de rendimiento](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/performance.md#evidencia-y-límites)
+La [referencia de rendimiento](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/performance.md#evidencia-y-límites)
 delimita las mediciones disponibles y su alcance. Los valores de compilaciones
 anteriores no son presupuestos vigentes ni prueban la cuota máxima actual.
 
@@ -98,7 +98,7 @@ sobre fondo negro, y se publica como JPEG de hasta 8 KiB.
 
 Desde el directorio `plugins`, con las dependencias ya disponibles. El ejemplo
 escribe un paquete local, no una publicación; para la caché offline y el gate
-completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
+completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md).
 
 ```sh
 cargo build --release -p rad-plugin-media
@@ -117,7 +117,7 @@ registra las llamadas, responde propiedades MPRIS, emite `PropertiesChanged` y
 permite dejar de responder o salir en un momento dado. Antes de ejecutar un único
 target (`cargo test --test actions`), compilar el helper con
 `cargo build --examples`. Para el gate completo, seguir
-[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
+[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md).
 
 **No ejecutar `fake_player` contra el entorno personal.** Registra un reproductor
 MPRIS falso en el bus de `DBUS_SESSION_BUS_ADDRESS`, lo que introduciría un

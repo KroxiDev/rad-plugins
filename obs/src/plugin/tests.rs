@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 /// Every request the plugin may send, as a complete fake OBS announces them.
-const AVAILABLE: &[&str] = &[
+pub(super) const AVAILABLE: &[&str] = &[
     "GetVersion",
     "GetSceneCollectionList",
     "GetSceneList",
@@ -55,7 +55,7 @@ fn answer(ws: &mut tungstenite::WebSocket<std::net::TcpStream>, expected: &str, 
 fn recording() -> Value {
     json!({"outputActive":true,"outputPaused":false})
 }
-fn send(s: &mut UnixStream, n: u64, message: Value) {
+pub(super) fn send(s: &mut UnixStream, n: u64, message: Value) {
     let b = serde_json::to_vec(
         &json!({"protocol":1,"correlation":{"generation":1,"request":n},"message":message}),
     )
@@ -63,7 +63,7 @@ fn send(s: &mut UnixStream, n: u64, message: Value) {
     s.write_all(&(b.len() as u32).to_be_bytes()).unwrap();
     s.write_all(&b).unwrap();
 }
-fn recv(s: &mut UnixStream) -> Value {
+pub(super) fn recv(s: &mut UnixStream) -> Value {
     let mut h = [0; 4];
     s.read_exact(&mut h).unwrap();
     let mut b = vec![0; u32::from_be_bytes(h) as usize];
@@ -88,9 +88,9 @@ fn collection_barrier_stops_readiness_until_changed() {
         pending_text: None,
         backoff: Duration::from_millis(250),
     };
-    s.event("CurrentSceneCollectionChanging", now);
+    s.event("CurrentSceneCollectionChanging", &Value::Null, now);
     assert!(!s.ready());
-    s.event("CurrentSceneCollectionChanged", now);
+    s.event("CurrentSceneCollectionChanged", &Value::Null, now);
     assert!(s.ready());
 }
 fn scripted(
@@ -137,7 +137,7 @@ fn scripted(
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -265,7 +265,7 @@ fn disconnect_after_effect_never_replays_on_next_action() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -338,7 +338,7 @@ fn record_effect_is_sent_once_and_confirmed_through_sdk() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -406,7 +406,7 @@ fn challenged_and_unchallenged_actions_release_socket_before_ack() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
         );
         assert_eq!(recv(&mut host)["message"]["kind"], "ready");
         send(
@@ -483,7 +483,7 @@ fn event_during_snapshot_drains_old_reply_before_resync_and_never_publishes_it()
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -562,7 +562,7 @@ fn stalled_or_flooded_old_revision_does_not_block_new_revision() {
         send(
             &mut host,
             1,
-            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+            json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
         );
         recv(&mut host);
         send(
@@ -658,7 +658,7 @@ fn an_action_waits_fifteen_seconds_for_obs_to_accept_then_says_it_is_unavailable
             sessions: BTreeMap::new(),
             stop: false,
         }),
-        wake: Condvar::new(),
+        wake: Wake::new().unwrap(),
         endpoint,
     });
     // No worker thread: the identical production turn is driven by this test clock.
@@ -673,7 +673,7 @@ fn an_action_waits_fifteen_seconds_for_obs_to_accept_then_says_it_is_unavailable
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -756,7 +756,7 @@ fn a_request_obs_does_not_announce_fails_without_being_sent() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -842,7 +842,7 @@ fn revision_churn_child() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     std::thread::sleep(Duration::from_millis(20));
@@ -1061,7 +1061,7 @@ fn settings_port_separates_live_sessions_with_the_same_credentials() {
             sessions: BTreeMap::new(),
             stop: false,
         }),
-        wake: Condvar::new(),
+        wake: Wake::new().unwrap(),
         endpoint,
     });
     let plugin = ObsPlugin {
@@ -1075,7 +1075,7 @@ fn settings_port_separates_live_sessions_with_the_same_credentials() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","settings"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","settings"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     recv(&mut host);
     send(
@@ -1134,7 +1134,7 @@ fn settings_port_is_bounded_loopback_and_test_mode_never_reaches_personal_obs() 
             sessions: BTreeMap::new(),
             stop: false,
         }),
-        wake: Condvar::new(),
+        wake: Wake::new().unwrap(),
         endpoint: SocketAddrV4::new(Ipv4Addr::LOCALHOST, 4455),
     };
     assert_eq!(shared.endpoint_for(None).unwrap().port(), 4455);

@@ -1,21 +1,23 @@
 //! SDK adapter and one bounded worker. No OBS I/O occurs on the SDK thread.
 use crate::{protocol, transport::Transport};
+mod wake;
 use rad_plugin_sdk::*;
 use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
     net::{Ipv4Addr, SocketAddrV4},
-    sync::{Arc, Condvar, Mutex},
+    sync::{Arc, Mutex},
     thread::JoinHandle,
     time::{Duration, Instant},
 };
+use wake::Wake;
 pub fn config() -> Config {
     Config::new(
         "org.rad.obs",
         Version {
             major: 0,
             minor: 4,
-            patch: 0,
+            patch: 1,
         },
         1..=1,
     )
@@ -85,7 +87,7 @@ struct Inner {
 }
 struct Shared {
     inner: Mutex<Inner>,
-    wake: Condvar,
+    wake: Wake,
     endpoint: SocketAddrV4,
 }
 impl Shared {
@@ -137,7 +139,7 @@ impl ObsPlugin {
                 sessions: BTreeMap::new(),
                 stop: false,
             }),
-            wake: Condvar::new(),
+            wake: Wake::new()?,
             endpoint,
         });
         let worker = shared.clone();
@@ -378,14 +380,16 @@ fn run_worker(shared: Arc<Shared>) {
         if inner.stop {
             continue;
         }
-        if inner.sessions.is_empty() {
-            // No sockets or deadlines remain: only new demand (or shutdown) can wake us.
-            let _guard = shared
-                .wake
-                .wait_while(inner, |inner| !inner.stop && inner.sessions.is_empty());
-        } else {
-            let _ = shared.wake.wait_timeout(inner, Duration::from_millis(20));
-        }
+        let sockets = inner
+            .sessions
+            .values()
+            .filter_map(|session| session.transport.as_ref().and_then(Transport::readiness))
+            .collect();
+        // Retain the existing timer bound for deadlines/retries, but socket data and
+        // new SDK demand wake immediately. With no demand there is no periodic wake.
+        let timeout = if inner.sessions.is_empty() { -1 } else { 20 };
+        drop(inner);
+        shared.wake.wait(sockets, timeout);
     }
 }
 // Same turn for production monotonic time and isolated deadline tests.
@@ -446,7 +450,7 @@ fn worker_turn(shared: &Shared, now: Instant) -> bool {
         }
         session.queries = keep;
         for w in &mut session.watches {
-            if result.is_err() || (w.flow.is_some() && now >= w.deadline) {
+            if !session.blocked && (result.is_err() || (w.flow.is_some() && now >= w.deadline)) {
                 w.flow = None;
                 w.sent = None;
                 w.next = now + Duration::from_millis(250);
@@ -472,7 +476,7 @@ impl Session {
     fn has_demand(&self) -> bool {
         !self.waits.is_empty() || !self.queries.is_empty() || !self.watches.is_empty()
     }
-    fn event(&mut self, event: &str, now: Instant) {
+    fn event(&mut self, event: &str, data: &Value, now: Instant) {
         if event == "CurrentSceneCollectionChanging" {
             self.blocked = true;
             for w in &mut self.waits {
@@ -486,34 +490,47 @@ impl Session {
         }
         if event == "CurrentSceneCollectionChanged" {
             self.blocked = false;
+            // OBS may abandon requests from the old collection. Their IDs are no longer
+            // owned by any consumer; a late response cannot match a fresh request.
+            self.discarded = None;
         }
-        let relevant = event.starts_with("Scene")
-            || event.starts_with("Input")
-            || event.starts_with("SourceFilter")
-            || event.starts_with("Current")
-            || matches!(
-                event,
-                "RecordStateChanged"
-                    | "StreamStateChanged"
-                    | "VirtualcamStateChanged"
-                    | "ReplayBufferStateChanged"
-            );
-        if relevant {
+        let lists_changed = matches!(
+            event,
+            "SceneCreated"
+                | "SceneRemoved"
+                | "SceneNameChanged"
+                | "SceneListChanged"
+                | "InputCreated"
+                | "InputRemoved"
+                | "InputNameChanged"
+                | "SceneItemCreated"
+                | "SceneItemRemoved"
+                | "SceneItemListReindexed"
+                | "SourceFilterCreated"
+                | "SourceFilterRemoved"
+                | "SourceFilterNameChanged"
+                | "SourceFilterListReindexed"
+                | "SceneCollectionListChanged"
+                | "CurrentSceneCollectionChanging"
+                | "CurrentSceneCollectionChanged"
+        );
+        if lists_changed {
             for q in &mut self.queries {
                 q.result = Some(ChoiceList::Unavailable);
                 if let Some(sent) = q.sent.take() {
                     self.discarded = Some((sent, q.deadline));
                 }
             }
-            for w in &mut self.watches {
-                if let Some(sent) = w.sent.take() {
-                    self.discarded = Some((sent, w.deadline));
-                }
-                w.flow = None;
-                w.next = now;
-                w.last = VisualState::Unavailable;
-                w.sub.update(w.last.clone());
+        }
+        for w in &mut self.watches {
+            if !event_affects(w, event, data) {
+                continue;
             }
+            if let Some(sent) = w.sent.take() {
+                self.discarded = Some((sent, w.deadline));
+            }
+            w.flow = None;
+            w.next = now;
         }
     }
     fn ready(&self) -> bool {
@@ -603,7 +620,7 @@ impl Session {
                 if event == "ExitStarted" {
                     return Err(FailureCode::Unavailable);
                 }
-                self.event(event, now);
+                self.event(event, &message["d"]["eventData"], now);
                 continue;
             }
             match self.phase {
@@ -717,7 +734,6 @@ impl Session {
                             .find(|w| protocol::matches_response(w.sent.as_deref(), &message))
                         {
                             job.sent = None;
-                            job.next = now + Duration::from_millis(100);
                             let result = if job
                                 .flow
                                 .request()
@@ -728,6 +744,11 @@ impl Session {
                                 job.flow.reject()
                             } else {
                                 job.flow.accept(message["d"]["responseData"].clone())
+                            };
+                            job.next = if job.flow.confirming() {
+                                now + Duration::from_millis(100)
+                            } else {
+                                now
                             };
                             job.outcome = match result {
                                 Err(code) => Some(Outcome::Failure { code }),
@@ -831,6 +852,87 @@ impl Session {
         Ok(())
     }
 }
+// Event payloads identify what to reread; only visual_state interprets observations.
+fn event_affects(watch: &Watch, event: &str, data: &Value) -> bool {
+    let source = watch.sub.source();
+    let params = watch.sub.parameters();
+    let field = match source {
+        "scene" => "scene",
+        "mute" => "input",
+        "item" => "item",
+        "filter" => "source",
+        _ => "",
+    };
+    let target = params
+        .text(field)
+        .and_then(|v| crate::workflow::target(v).ok());
+    // Missing identity fields mean reread this type, never guess which object changed.
+    let name_matches = |name: Option<&str>, key: &str, old: Option<&str>| {
+        data[key].as_str().is_none()
+            || old.is_some_and(|key| data[key].as_str().is_none())
+            || name
+                .is_some_and(|name| data[key] == name || old.is_some_and(|key| data[key] == name))
+    };
+    let name = target.as_ref().map(|t| t.name.as_str());
+    match event {
+        "RecordStateChanged" => matches!(source, "record" | "pause"),
+        "StreamStateChanged" => source == "stream",
+        "VirtualcamStateChanged" => source == "virtualcam",
+        "ReplayBufferStateChanged" => source == "replay",
+        "InputMuteStateChanged" => source == "mute" && name_matches(name, "inputName", None),
+        "SceneItemEnableStateChanged" | "SceneItemCreated" | "SceneItemRemoved" => {
+            source == "item"
+                && (data["sceneName"].as_str().is_none()
+                    || data["sceneItemId"].as_i64().is_none()
+                    || (name_matches(name, "sceneName", None)
+                        && target
+                            .as_ref()
+                            .is_some_and(|t| t.item == data["sceneItemId"].as_i64())))
+        }
+        "SourceFilterEnableStateChanged"
+        | "SourceFilterCreated"
+        | "SourceFilterRemoved"
+        | "SourceFilterNameChanged" => {
+            let old = (event == "SourceFilterNameChanged").then_some("oldFilterName");
+            source == "filter"
+                && (data["sourceName"].as_str().is_none()
+                    || data["filterName"].as_str().is_none()
+                    || old.is_some_and(|key| data[key].as_str().is_none())
+                    || (name_matches(name, "sourceName", None)
+                        && name_matches(params.text("filter"), "filterName", old)))
+        }
+        "CurrentProgramSceneChanged" => {
+            source == "scene"
+                && (name_matches(name, "sceneName", None)
+                    || matches!(&watch.last, VisualState::Current { content } if content.state.as_deref() == Some("active")))
+        }
+        "SceneCreated" | "SceneRemoved" | "SceneNameChanged" => {
+            let old = (event == "SceneNameChanged").then_some("oldSceneName");
+            matches!(source, "scene" | "item" | "filter")
+                && (name_matches(name, "sceneName", old)
+                    || (source == "item"
+                        && name_matches(
+                            target.as_ref().and_then(|t| t.source.as_deref()),
+                            "sceneName",
+                            old,
+                        )))
+        }
+        "InputCreated" | "InputRemoved" | "InputNameChanged" => {
+            let old = (event == "InputNameChanged").then_some("oldInputName");
+            match source {
+                "mute" | "filter" => name_matches(name, "inputName", old),
+                "item" => name_matches(
+                    target.as_ref().and_then(|t| t.source.as_deref()),
+                    "inputName",
+                    old,
+                ),
+                _ => false,
+            }
+        }
+        "CurrentSceneCollectionChanging" | "CurrentSceneCollectionChanged" => true,
+        _ => false,
+    }
+}
 fn visual_state(source: &str, params: &Parameters, data: &Value) -> VisualState {
     let (state, text) = match source {
         "record" => match (
@@ -899,5 +1001,9 @@ fn visual_state(source: &str, params: &Parameters, data: &Value) -> VisualState 
         },
     }
 }
+#[cfg(test)]
+mod benchmark;
+#[cfg(test)]
+mod event_tests;
 #[cfg(test)]
 mod tests;

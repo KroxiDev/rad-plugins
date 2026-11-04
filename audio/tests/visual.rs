@@ -454,3 +454,32 @@ fn adding_a_subscriber_during_a_blocked_read_does_not_refresh_cached_visuals() {
     assert!(eventually(secs(2), || server.live_subscribers() == 0
         && server.live_hung() == 0));
 }
+
+#[test]
+fn active_and_muted_states_publish_without_a_background_color() {
+    for (source, kind, device) in [
+        ("output", Kind::Output, "sink-a"),
+        ("microphone", Kind::Microphone, "mic-b"),
+    ] {
+        for muted in [false, true] {
+            let server = FakeServer::new();
+            server.set_mute(kind, device, muted);
+            let mut host = Host::start(&server, quick());
+            let subscription = host.subscribe(source, device);
+            let frame = host
+                .take(
+                    |frame| {
+                        frame["correlation"]["request"] == subscription
+                            && frame["message"]["kind"] == "visual"
+                            && frame["message"]["state"]["availability"] == "current"
+                    },
+                    secs(5),
+                )
+                .expect("current audio state");
+            let content = &frame["message"]["state"]["content"];
+            assert_eq!(content["state"], if muted { "muted" } else { "unmuted" });
+            assert!(content["color"].is_null(), "{source}/{muted}: {content}");
+            host.finish().unwrap();
+        }
+    }
+}

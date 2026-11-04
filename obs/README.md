@@ -1,9 +1,9 @@
 # Plugin de OBS para RAD
 
 Referencia de la integración oficial para desarrolladores y agentes. Plugin
-independiente `org.rad.obs` (`rad-plugin-obs`), versión 0.4.0, contrato de plugins v1
+independiente `org.rad.obs` (`rad-plugin-obs`), versión 0.4.1, contrato de plugins v1
 con capacidades negociadas de credenciales, ajustes, opciones, textos traducidos y
-plazo de respuesta ([ADR 0020](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)).
+plazo de respuesta ([ADR 0020](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)).
 Consultar el [contrato y la guía para autores](../README.md).
 
 Se conecta únicamente a **127.0.0.1** mediante obs-websocket 5.x, RPC 1 y WebSocket
@@ -43,7 +43,10 @@ invierte lo leído; iniciar lo que ya está activo, o detener lo detenido, termi
 con éxito sin enviar nada. El éxito se confirma leyendo el estado real de OBS
 después del cambio; aceptar una orden no basta. «Guardar repetición» exige el
 búfer activo y se confirma cuando OBS informa una repetición guardada distinta
-de la anterior.
+de la anterior. Los pasos previos a la orden continúan al recibir cada respuesta;
+solo las lecturas de confirmación esperan 100 ms. Una acción lista tiene prioridad
+sobre las consultas de opciones y las relecturas pendientes. Los datos del socket
+y la demanda del SDK despiertan al worker sin esperar su siguiente revisión de plazos.
 
 Las acciones declaran 20 segundos de plazo al host. Si OBS no acepta la conexión,
 como mientras se está abriendo, cada acción lo espera hasta 15 segundos; después
@@ -52,7 +55,12 @@ funciona en una sola tecla. Las acciones sobre un mismo OBS se ejecutan de a una
 y en orden, de modo que cada una lee el estado que dejó la anterior. Una orden
 que ya llegó a OBS nunca se repite tras reconectar: si la conexión se pierde
 durante la acción, esta falla. La reconexión refresca observaciones. Los
-visuales observan también los cambios hechos fuera de RAD. Una selección
+visuales observan también los cambios hechos fuera de RAD: cada evento actualiza
+solo las teclas cuyos objetivos cambiaron. Mientras se releen, conservan su último
+estado sin mostrar la cara base ni una marca de fallo. Los eventos que no cambian
+estados mostrados, como seleccionar una fuente o ajustar su volumen, no provocan
+relecturas. Las lecturas periódicas cada dos segundos siguen renovando la vigencia.
+Una selección
 desconectada, incompatible, ausente o desactualizada se declara no disponible en
 vez de adivinarla.
 
@@ -68,7 +76,14 @@ truncarlos (límite defensivo de compatibilidad independiente del framing del SD
 Las listas de más de 64 opciones o las identidades/etiquetas de más de 256 bytes
 UTF-8 quedan no disponibles, nunca truncadas.
 
-Las peticiones se detienen mientras OBS cambia de colección de escenas. La
+Las peticiones se detienen mientras OBS cambia de colección de escenas y las
+acciones en curso fallan. Durante la transición los visuales conservan su último
+estado sin publicar cambios ni renovaciones, incluso si vence el plazo de una
+lectura. Si se prolonga, el host marca la vigencia vencida según el
+[ADR 0008](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/adr/0008-frescura-declarada.md). Al terminar se releen todos
+los objetivos; los ausentes se declaran no disponibles. Las consultas de opciones
+se invalidan únicamente ante cambios de listas o de colección.
+La
 compatibilidad se comprueba contra las peticiones que OBS anuncia realmente;
 los controles no soportados se rechazan sin intentar ejecutarlos. Esto no afirma
 compatibilidad con todas las compilaciones ni distribuciones de OBS.
@@ -84,9 +99,23 @@ endpoint del plugin.
 `obs-fixture` admite un puerto de prueba como argumento; sin argumentos, lee un
 archivo privado regular `0600` en `$XDG_RUNTIME_DIR/rad-obs-fixture.port`. Rechaza
 el puerto 4455 y nunca recurre a producción como alternativa.
-Compilar primero los helpers según [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
+Compilar primero los helpers según [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md).
 
-La [evidencia real disponible](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/performance.md#evidencia-y-límites)
+El benchmark ignorado `time_to_order_real_worker` mide desde el envío de `invoke`
+por el SDK hasta la llegada de la orden al peer falso, con el worker real. Para
+repetirlo, desde este workspace y con el entorno de pruebas cargado:
+
+```sh
+cargo test --offline --locked --release -p rad-plugin-obs time_to_order_real_worker -- --ignored --nocapture
+```
+
+Registra mediana y p95 de 30 muestras por operación, con nueve visuales suscritos,
+en sesión lista y con una petición visual en vuelo. Mide aparte la espera de la
+segunda acción por su primera petición al peer y el caso sin sesión abierta
+(excluye el arranque del proceso/SDK). `RAD_OBS_BENCH_ACTION=item` limita la
+medición a una operación; `queue` limita a la espera en cola. No forma parte del gate.
+
+La [evidencia real disponible](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/performance.md#evidencia-y-límites)
 delimita las consultas OBS medidas mediante relay de solo lectura; no certifica
 acciones, autenticación directa ni todas las versiones, compilaciones o
 distribuciones de OBS.

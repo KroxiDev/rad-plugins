@@ -1,7 +1,7 @@
 {
  "version": 1,
  "repository": "https://github.com/KroxiDev/RAD",
- "commit": "eb86e1cc596dd63e07a38d89e03011284682b49f",
+ "commit": "98fb7ce54a65cf38e57a697b4edbddf598d6319e",
  "files": [
   {
    "source": "plugins/.gitignore",
@@ -13,8 +13,8 @@
   {
    "source": "plugins/Cargo.lock",
    "path": "Cargo.lock",
-   "source_sha256": "18f2167d19b3f9924bce02b606c585a32f307b535dbe26d31c30e33892b8a250",
-   "sha256": "18f2167d19b3f9924bce02b606c585a32f307b535dbe26d31c30e33892b8a250",
+   "source_sha256": "763fd252cd194e041ab30bd1604a5c13ab643c6fe89b03f26aa94f6921492145",
+   "sha256": "763fd252cd194e041ab30bd1604a5c13ab643c6fe89b03f26aa94f6921492145",
    "transforms": []
   },
   {
@@ -36,8 +36,8 @@
   {
    "source": "plugins/README.md",
    "path": "README.md",
-   "source_sha256": "e1bf0dedfa12391b55f66697ee6bca597b9437cc2bd8b725af1eb344d5767c29",
-   "sha256": "2bda548fc046c1319332a661daaaaebab291cb6a368a3f947f9cabfe0c2c84c3",
+   "source_sha256": "c64413c3cefc7a9b9affeb8ec90a190867e575e1c0161af1545107767d543c13",
+   "sha256": "81530d0ec8167197517fd6649abcb495116360ef903b24c1ed95cf003a0ef96d",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit",
     "Add source-provenance section"
@@ -46,15 +46,15 @@
   {
    "source": "plugins/audio/Cargo.toml",
    "path": "audio/Cargo.toml",
-   "source_sha256": "214529318a5af2242a0ad3abf985c9bba7d051580d7cfa8d05d4113a73973e3d",
-   "sha256": "214529318a5af2242a0ad3abf985c9bba7d051580d7cfa8d05d4113a73973e3d",
+   "source_sha256": "d6fdbc21f70e9109187dfa14a3a9ec39aa19654fa12ce5ea84e4ff4b266d54c5",
+   "sha256": "d6fdbc21f70e9109187dfa14a3a9ec39aa19654fa12ce5ea84e4ff4b266d54c5",
    "transforms": []
   },
   {
    "source": "plugins/audio/README.md",
    "path": "audio/README.md",
-   "source_sha256": "96baa4442f6b8a77a4b7b682398c32ffdf0b0050be6ec70664703f02edff54ef",
-   "sha256": "0b231317a7800d95d3640ea230e1b0e9b4eb794fd836e358d54bc4c951f25639",
+   "source_sha256": "44017878781c9d32323041c0816847993429c92a5e379011d9f4b0a84f33913d",
+   "sha256": "7fbf21c4278322da11177933a54ae4c9356e77cdae50c1c1fc861ce45e50b9b8",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -76,64 +76,64 @@
   {
    "source": "plugins/audio/icons/microphone-muted.png",
    "path": "audio/icons/microphone-muted.png",
-   "source_sha256": "3534d27c116e3dbafc9f67dcd0fc5fb0052b5e10d003090f1f97ba67b77f169a",
-   "sha256": "3534d27c116e3dbafc9f67dcd0fc5fb0052b5e10d003090f1f97ba67b77f169a",
+   "source_sha256": "4400836817e7ade775004e44eea85af457ca80da3850dd4fd5b5f7ab87b386ff",
+   "sha256": "4400836817e7ade775004e44eea85af457ca80da3850dd4fd5b5f7ab87b386ff",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/microphone-muted.svg",
    "path": "audio/icons/microphone-muted.svg",
-   "source_sha256": "23bd348d0e63e972f8a7889ab9b15799b39c56039cb74eeff1baae581c4cf7e2",
-   "sha256": "23bd348d0e63e972f8a7889ab9b15799b39c56039cb74eeff1baae581c4cf7e2",
+   "source_sha256": "fec68f4d295e35af2647096e07907a1f8b7716a85c07f7e2fdd17eb42624138f",
+   "sha256": "fec68f4d295e35af2647096e07907a1f8b7716a85c07f7e2fdd17eb42624138f",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/microphone-unmuted.png",
    "path": "audio/icons/microphone-unmuted.png",
-   "source_sha256": "3027dd4bfa43119c33a9d169be4a265cefa7c4dc5878e66c020895a9c222eabb",
-   "sha256": "3027dd4bfa43119c33a9d169be4a265cefa7c4dc5878e66c020895a9c222eabb",
+   "source_sha256": "202364976f2281e4380710359a73f7c2062b7d60678634586f8102c72fc2bd5a",
+   "sha256": "202364976f2281e4380710359a73f7c2062b7d60678634586f8102c72fc2bd5a",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/microphone-unmuted.svg",
    "path": "audio/icons/microphone-unmuted.svg",
-   "source_sha256": "97c185977719bc105bb136bd98cd216b86921f41cfbfd37ee7ea283c49237cc7",
-   "sha256": "97c185977719bc105bb136bd98cd216b86921f41cfbfd37ee7ea283c49237cc7",
+   "source_sha256": "1f7447d8cccbd9809a2479cd8f25e0a5e57b1c9c505f79db612b598ae86db89f",
+   "sha256": "1f7447d8cccbd9809a2479cd8f25e0a5e57b1c9c505f79db612b598ae86db89f",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/output-muted.png",
    "path": "audio/icons/output-muted.png",
-   "source_sha256": "95f443933848ce2f92a184f31782c3ec90de3ca93bf43e9c0c49d8f312932d8e",
-   "sha256": "95f443933848ce2f92a184f31782c3ec90de3ca93bf43e9c0c49d8f312932d8e",
+   "source_sha256": "28dfa438ef8619fec7f1f9b453e92c0fe4e6963c028633a0470876f63bcc3eb6",
+   "sha256": "28dfa438ef8619fec7f1f9b453e92c0fe4e6963c028633a0470876f63bcc3eb6",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/output-muted.svg",
    "path": "audio/icons/output-muted.svg",
-   "source_sha256": "10a0dc5010b875615f8950d04fc3977a50b8c2fa59370cd30bd5114d0f413d74",
-   "sha256": "10a0dc5010b875615f8950d04fc3977a50b8c2fa59370cd30bd5114d0f413d74",
+   "source_sha256": "391b77f00c2c7fba13fd3a9f0d7efb600765ea021692d67d02f76c0e8425fddc",
+   "sha256": "391b77f00c2c7fba13fd3a9f0d7efb600765ea021692d67d02f76c0e8425fddc",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/output-unmuted.png",
    "path": "audio/icons/output-unmuted.png",
-   "source_sha256": "cd018f4f4cca1f39a8645b630cfc6f048310595276f274004394c73da4a0e8f8",
-   "sha256": "cd018f4f4cca1f39a8645b630cfc6f048310595276f274004394c73da4a0e8f8",
+   "source_sha256": "3db250814a67782694b01b9ad67d0f65ffd1db99f7b1c29036d024dbfabd1780",
+   "sha256": "3db250814a67782694b01b9ad67d0f65ffd1db99f7b1c29036d024dbfabd1780",
    "transforms": []
   },
   {
    "source": "plugins/audio/icons/output-unmuted.svg",
    "path": "audio/icons/output-unmuted.svg",
-   "source_sha256": "ace60cc1bea41f23736320d069c53dec1760e6c00a236cf7a6fcae5d3a2951ab",
-   "sha256": "ace60cc1bea41f23736320d069c53dec1760e6c00a236cf7a6fcae5d3a2951ab",
+   "source_sha256": "8daea937888a25aa6de5effbca6c14709d432f749ec5625a8f6a56a10055587a",
+   "sha256": "8daea937888a25aa6de5effbca6c14709d432f749ec5625a8f6a56a10055587a",
    "transforms": []
   },
   {
    "source": "plugins/audio/manifest.json",
    "path": "audio/manifest.json",
-   "source_sha256": "df26d7f10f8e65970879dfedaabd58e8d700d3244d4ad1bf03da36ff0378fd3c",
-   "sha256": "df26d7f10f8e65970879dfedaabd58e8d700d3244d4ad1bf03da36ff0378fd3c",
+   "source_sha256": "6b571b709d5b1da74009f2bf607a83800e8d9f1065c8b2c9ba96df53a12b87b1",
+   "sha256": "6b571b709d5b1da74009f2bf607a83800e8d9f1065c8b2c9ba96df53a12b87b1",
    "transforms": []
   },
   {
@@ -181,8 +181,8 @@
   {
    "source": "plugins/audio/src/plugin.rs",
    "path": "audio/src/plugin.rs",
-   "source_sha256": "0bb72fee011334be0c8372b5ddd6e5bd18ed86b8b251794fda4d54848736fb83",
-   "sha256": "0bb72fee011334be0c8372b5ddd6e5bd18ed86b8b251794fda4d54848736fb83",
+   "source_sha256": "e98b440efbb6ca4b6faf5f59f6870ef806bd8e78e000ab986c08f693fdf41c42",
+   "sha256": "e98b440efbb6ca4b6faf5f59f6870ef806bd8e78e000ab986c08f693fdf41c42",
    "transforms": []
   },
   {
@@ -209,8 +209,8 @@
   {
    "source": "plugins/audio/src/watch.rs",
    "path": "audio/src/watch.rs",
-   "source_sha256": "39b7ac666232354d357becc6e62f8a60fa68e8527ccff26035bf9987ee34c955",
-   "sha256": "39b7ac666232354d357becc6e62f8a60fa68e8527ccff26035bf9987ee34c955",
+   "source_sha256": "a13309901caab9eae7452bead74cb24a23a2b654f02beee5b7795cdbe96edbff",
+   "sha256": "a13309901caab9eae7452bead74cb24a23a2b654f02beee5b7795cdbe96edbff",
    "transforms": []
   },
   {
@@ -228,10 +228,17 @@
    "transforms": []
   },
   {
+   "source": "plugins/audio/tests/icons.rs",
+   "path": "audio/tests/icons.rs",
+   "source_sha256": "250df1d1124482671e91aec81cd58688071437ddc7df9cf86e564ee660189cd0",
+   "sha256": "250df1d1124482671e91aec81cd58688071437ddc7df9cf86e564ee660189cd0",
+   "transforms": []
+  },
+  {
    "source": "plugins/audio/tests/manifest.rs",
    "path": "audio/tests/manifest.rs",
-   "source_sha256": "4f3fb01d2e6405509daf7f88aebf9d7604e81ea047a83ccb76ea42fc5313d602",
-   "sha256": "4f3fb01d2e6405509daf7f88aebf9d7604e81ea047a83ccb76ea42fc5313d602",
+   "source_sha256": "6becebc03e206833bef13b525463a9acb11367047c0763fc6e60dbf51aa41090",
+   "sha256": "6becebc03e206833bef13b525463a9acb11367047c0763fc6e60dbf51aa41090",
    "transforms": []
   },
   {
@@ -251,8 +258,8 @@
   {
    "source": "plugins/audio/tests/process.rs",
    "path": "audio/tests/process.rs",
-   "source_sha256": "4e966718ba3da4c091219fece12f8cdb284a44d594cb268ce314493e4a9b983c",
-   "sha256": "4e966718ba3da4c091219fece12f8cdb284a44d594cb268ce314493e4a9b983c",
+   "source_sha256": "40f777d2ddd8466e70925e7562686b8479b51ea1d1b5fd21e17b793e65e4d0f9",
+   "sha256": "40f777d2ddd8466e70925e7562686b8479b51ea1d1b5fd21e17b793e65e4d0f9",
    "transforms": []
   },
   {
@@ -272,15 +279,15 @@
   {
    "source": "plugins/audio/tests/support/mod.rs",
    "path": "audio/tests/support/mod.rs",
-   "source_sha256": "4ce7496da587b1f4f0ac313f0b35e2e149547187716d6af496981b67db87e367",
-   "sha256": "4ce7496da587b1f4f0ac313f0b35e2e149547187716d6af496981b67db87e367",
+   "source_sha256": "4d5678e7007af43d73352a8f1f8c690612bbff34f59f4e95004c692992e7a5bb",
+   "sha256": "4d5678e7007af43d73352a8f1f8c690612bbff34f59f4e95004c692992e7a5bb",
    "transforms": []
   },
   {
    "source": "plugins/audio/tests/visual.rs",
    "path": "audio/tests/visual.rs",
-   "source_sha256": "20451fa5c0abfb9b75e0ef952a97aa900f2fc832e957133b109a9b91ab815466",
-   "sha256": "20451fa5c0abfb9b75e0ef952a97aa900f2fc832e957133b109a9b91ab815466",
+   "source_sha256": "dd45ca7324724306bf749da3bafee5b3d13cd089955f4f6c0ab1613a20804d10",
+   "sha256": "dd45ca7324724306bf749da3bafee5b3d13cd089955f4f6c0ab1613a20804d10",
    "transforms": []
   },
   {
@@ -462,7 +469,7 @@
    "source": "plugins/media/README.md",
    "path": "media/README.md",
    "source_sha256": "b74c7032d3a095fece50730933c078027de5d30da521abb2c1984bdd52e4b619",
-   "sha256": "57837b1f62d8332f0d61247b3b4cf444b0a971437e9e6fcf396a90291ee694db",
+   "sha256": "c86a06f3422547a12139a6bd3004640819cbab81363eaec9fae188186964d13d",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -2250,15 +2257,15 @@
   {
    "source": "plugins/obs/Cargo.toml",
    "path": "obs/Cargo.toml",
-   "source_sha256": "c386d58cc9325bd537135a51eca066117ccabc525b341c49755afb36a2a91e30",
-   "sha256": "c386d58cc9325bd537135a51eca066117ccabc525b341c49755afb36a2a91e30",
+   "source_sha256": "ef65c499b938339962bbc82313af8aed68165966cfa4c6dfb0ea8be0966578b5",
+   "sha256": "ef65c499b938339962bbc82313af8aed68165966cfa4c6dfb0ea8be0966578b5",
    "transforms": []
   },
   {
    "source": "plugins/obs/README.md",
    "path": "obs/README.md",
-   "source_sha256": "8647d2947a386b289d519b7c19468d33af57f2371c05e292bbf10eb1e99c5a23",
-   "sha256": "1457a7caff0e066074a68de52d44385013dcafc1dceb75ecdcf4f2892e558777",
+   "source_sha256": "9b011f120c0b2dbeb6ccc70cdf6eeec23690ac9783b1bf0fe31593542b99e4f2",
+   "sha256": "32b7df16f514f8884c588b5d66c91b756666ebfca6926b7b507cab186e3e9b89",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -2287,260 +2294,260 @@
   {
    "source": "plugins/obs/icons/filter-off.png",
    "path": "obs/icons/filter-off.png",
-   "source_sha256": "c014d5cf21c58ce5d781955dc6fa362b1876d1c5e07c6bfbb6c82996be92b9ee",
-   "sha256": "c014d5cf21c58ce5d781955dc6fa362b1876d1c5e07c6bfbb6c82996be92b9ee",
+   "source_sha256": "f3ae443ac3bbdf1390cfc20ae04ec05f2ce0a69e1c92c6aa8a852db770fc0f14",
+   "sha256": "f3ae443ac3bbdf1390cfc20ae04ec05f2ce0a69e1c92c6aa8a852db770fc0f14",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/filter-off.svg",
    "path": "obs/icons/filter-off.svg",
-   "source_sha256": "fefd28af40226aaf00f119a721bd8f36d6f43d9d8f6927ad3658b2fd0c5c5f4d",
-   "sha256": "fefd28af40226aaf00f119a721bd8f36d6f43d9d8f6927ad3658b2fd0c5c5f4d",
+   "source_sha256": "81e79d51f3a8cd6ed63d7f9325027eb570da1f7f37298faa99aed1facdf6c32f",
+   "sha256": "81e79d51f3a8cd6ed63d7f9325027eb570da1f7f37298faa99aed1facdf6c32f",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/filter-on.png",
    "path": "obs/icons/filter-on.png",
-   "source_sha256": "e6697c7203999918d975720bf77953131cf61daba61c096ab3719e4097776090",
-   "sha256": "e6697c7203999918d975720bf77953131cf61daba61c096ab3719e4097776090",
+   "source_sha256": "8bef8c52d978538e69f7ed576119097def1d98b464af67a3b3aa2402da85c872",
+   "sha256": "8bef8c52d978538e69f7ed576119097def1d98b464af67a3b3aa2402da85c872",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/filter-on.svg",
    "path": "obs/icons/filter-on.svg",
-   "source_sha256": "5e7857935591d763383426cb9383e65bbdb68912c83612336a99ec1ad8f7a694",
-   "sha256": "5e7857935591d763383426cb9383e65bbdb68912c83612336a99ec1ad8f7a694",
+   "source_sha256": "cd6258db9147632a0a99db5a9ee9563f4f8312121e64adb2205a235c90380546",
+   "sha256": "cd6258db9147632a0a99db5a9ee9563f4f8312121e64adb2205a235c90380546",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/item-hidden.png",
    "path": "obs/icons/item-hidden.png",
-   "source_sha256": "826eca7bbb8fd44abb3402fc0f94e606d88c2fae686613c254b9c4aa1786afd2",
-   "sha256": "826eca7bbb8fd44abb3402fc0f94e606d88c2fae686613c254b9c4aa1786afd2",
+   "source_sha256": "63be989bd21f0c97f0d417f2d33b59507b1c55b17248a244e10091853da5a486",
+   "sha256": "63be989bd21f0c97f0d417f2d33b59507b1c55b17248a244e10091853da5a486",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/item-hidden.svg",
    "path": "obs/icons/item-hidden.svg",
-   "source_sha256": "cdd0a7828c123af75a20b182fd046deca78bf93f168975595b6048ff2e009261",
-   "sha256": "cdd0a7828c123af75a20b182fd046deca78bf93f168975595b6048ff2e009261",
+   "source_sha256": "578a80e243d4d1b92543cdd58ec15b1f9ce685801cc5e856c781625d0aa9ed44",
+   "sha256": "578a80e243d4d1b92543cdd58ec15b1f9ce685801cc5e856c781625d0aa9ed44",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/item-visible.png",
    "path": "obs/icons/item-visible.png",
-   "source_sha256": "bfc51dac682b9396718e12d226b8fb703934858ac425b28eaf350e201fff2446",
-   "sha256": "bfc51dac682b9396718e12d226b8fb703934858ac425b28eaf350e201fff2446",
+   "source_sha256": "2b76ffef2ead95a96b0bf7d43e0f645c97bf1e97fec7c106c4ff5cbd5d4d0509",
+   "sha256": "2b76ffef2ead95a96b0bf7d43e0f645c97bf1e97fec7c106c4ff5cbd5d4d0509",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/item-visible.svg",
    "path": "obs/icons/item-visible.svg",
-   "source_sha256": "4e8cc92397d53336dbc04d47668ae7dac332fdeb95b708b0a26b4373e2a77bd3",
-   "sha256": "4e8cc92397d53336dbc04d47668ae7dac332fdeb95b708b0a26b4373e2a77bd3",
+   "source_sha256": "0699ab82248f6caf0ed3527c645e569d991528026c5907c9fe1f6a5886c9305b",
+   "sha256": "0699ab82248f6caf0ed3527c645e569d991528026c5907c9fe1f6a5886c9305b",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/mute-muted.png",
    "path": "obs/icons/mute-muted.png",
-   "source_sha256": "ea911958d0b1d3f21e664f1ab012af431844c2193a9da6d8916984b852d7c4ca",
-   "sha256": "ea911958d0b1d3f21e664f1ab012af431844c2193a9da6d8916984b852d7c4ca",
+   "source_sha256": "446ac0f7d8cccfc8b3ad75d9b0fddc7972c22601ed0c5d77edc7131cf86e5a41",
+   "sha256": "446ac0f7d8cccfc8b3ad75d9b0fddc7972c22601ed0c5d77edc7131cf86e5a41",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/mute-muted.svg",
    "path": "obs/icons/mute-muted.svg",
-   "source_sha256": "4d4d618d3c2fef486f434213834717665bd8c0bfba3755c56a8e20285520c1e9",
-   "sha256": "4d4d618d3c2fef486f434213834717665bd8c0bfba3755c56a8e20285520c1e9",
+   "source_sha256": "b9ae53f722329e52a838fbc70d5e1dda1c1cf9f3b7660faae587179dd8391feb",
+   "sha256": "b9ae53f722329e52a838fbc70d5e1dda1c1cf9f3b7660faae587179dd8391feb",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/mute-unmuted.png",
    "path": "obs/icons/mute-unmuted.png",
-   "source_sha256": "0284aede4897d1ce957633e9e146bad799e6f8838a06ee636a4dcd645b57aa25",
-   "sha256": "0284aede4897d1ce957633e9e146bad799e6f8838a06ee636a4dcd645b57aa25",
+   "source_sha256": "0449f595c1d3abab06ae0b8fe558536f54448c1c9ec7c138773f6362495c8afa",
+   "sha256": "0449f595c1d3abab06ae0b8fe558536f54448c1c9ec7c138773f6362495c8afa",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/mute-unmuted.svg",
    "path": "obs/icons/mute-unmuted.svg",
-   "source_sha256": "6753325975abb2218cc00260a93d0354fcbde54b8f89de6c212ef8ea387b790b",
-   "sha256": "6753325975abb2218cc00260a93d0354fcbde54b8f89de6c212ef8ea387b790b",
+   "source_sha256": "2c189363810330f624e369c8df44aa3da7ae16e059230354381bb60be2d9aeb1",
+   "sha256": "2c189363810330f624e369c8df44aa3da7ae16e059230354381bb60be2d9aeb1",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/pause-paused.png",
    "path": "obs/icons/pause-paused.png",
-   "source_sha256": "4c9fb41ac802aa86aab8ba4effe3af598bcc156a71e8a68916af21efbf60b090",
-   "sha256": "4c9fb41ac802aa86aab8ba4effe3af598bcc156a71e8a68916af21efbf60b090",
+   "source_sha256": "b8a3111e4ed9d27f37c627ceda3ad7413701226de339abce3a05a01d5902746a",
+   "sha256": "b8a3111e4ed9d27f37c627ceda3ad7413701226de339abce3a05a01d5902746a",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/pause-paused.svg",
    "path": "obs/icons/pause-paused.svg",
-   "source_sha256": "19647006567ebbc16eee8ef7d3c99836fc1567b91db6d41a352357c2662210fd",
-   "sha256": "19647006567ebbc16eee8ef7d3c99836fc1567b91db6d41a352357c2662210fd",
+   "source_sha256": "665d28f271c7d08d4bd5fe96b8b5e808038e2d5cf0310496e4a2cea2ccb80c91",
+   "sha256": "665d28f271c7d08d4bd5fe96b8b5e808038e2d5cf0310496e4a2cea2ccb80c91",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/pause-running.png",
    "path": "obs/icons/pause-running.png",
-   "source_sha256": "9d2774a244936c482bb0eb7f2d29ca2afdd939700304eaec8bee3818002b8497",
-   "sha256": "9d2774a244936c482bb0eb7f2d29ca2afdd939700304eaec8bee3818002b8497",
+   "source_sha256": "de95d72077b28f39c86afd4a0ab9faff14143ea7b9fcdcf46ad8217c03a963e7",
+   "sha256": "de95d72077b28f39c86afd4a0ab9faff14143ea7b9fcdcf46ad8217c03a963e7",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/pause-running.svg",
    "path": "obs/icons/pause-running.svg",
-   "source_sha256": "7cb341994220a69b634a333af03385ae818ea85a042c6c2061c8fdd66c79513d",
-   "sha256": "7cb341994220a69b634a333af03385ae818ea85a042c6c2061c8fdd66c79513d",
+   "source_sha256": "39d505fa41ca1e42f81aaba8fc1121fe1b040545390d52d5341454c0b63c936f",
+   "sha256": "39d505fa41ca1e42f81aaba8fc1121fe1b040545390d52d5341454c0b63c936f",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/record-recording.png",
    "path": "obs/icons/record-recording.png",
-   "source_sha256": "d5c4d489fcaf1318b467c946c75788569f137189047e945eacfb72b7e6cf9e17",
-   "sha256": "d5c4d489fcaf1318b467c946c75788569f137189047e945eacfb72b7e6cf9e17",
+   "source_sha256": "77dc75e9e89518381a6c54f3cf8f5b33731c2270fbebd80388d7f4fa149e6da8",
+   "sha256": "77dc75e9e89518381a6c54f3cf8f5b33731c2270fbebd80388d7f4fa149e6da8",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/record-recording.svg",
    "path": "obs/icons/record-recording.svg",
-   "source_sha256": "08024d0923a4a09423feba7dfaf27665fe9ef506484b3a24c0b8b3d39451f993",
-   "sha256": "08024d0923a4a09423feba7dfaf27665fe9ef506484b3a24c0b8b3d39451f993",
+   "source_sha256": "15390129f7cf7a87381181e9c8adace67dcaf45fd822e947425e7d7e60349e5a",
+   "sha256": "15390129f7cf7a87381181e9c8adace67dcaf45fd822e947425e7d7e60349e5a",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/record-stopped.png",
    "path": "obs/icons/record-stopped.png",
-   "source_sha256": "1acd71bbe2056966952a2f812f9fa404bed264ba73f41c4209fdad246797f01d",
-   "sha256": "1acd71bbe2056966952a2f812f9fa404bed264ba73f41c4209fdad246797f01d",
+   "source_sha256": "03b6b4927e6dfc84c3cccb429b0b8c0a5a2c05e129f8ddaf4beb66329d9c8237",
+   "sha256": "03b6b4927e6dfc84c3cccb429b0b8c0a5a2c05e129f8ddaf4beb66329d9c8237",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/record-stopped.svg",
    "path": "obs/icons/record-stopped.svg",
-   "source_sha256": "8462606b140d0da24ff5aa7991fdfdb33c90c3405e28d2ccaa9b21533b882b56",
-   "sha256": "8462606b140d0da24ff5aa7991fdfdb33c90c3405e28d2ccaa9b21533b882b56",
+   "source_sha256": "3aee3c042f7812cb08b633a9475ed91da03a3e15d3b23e649cb94330b793d4e8",
+   "sha256": "3aee3c042f7812cb08b633a9475ed91da03a3e15d3b23e649cb94330b793d4e8",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/replay-off.png",
    "path": "obs/icons/replay-off.png",
-   "source_sha256": "0026cbf9df59495e869d7c2d16c48f1350323d1984e0f3f401f724dd4c3f8b1b",
-   "sha256": "0026cbf9df59495e869d7c2d16c48f1350323d1984e0f3f401f724dd4c3f8b1b",
+   "source_sha256": "dcc51bbe78870427e18cdc827508318659bd1c4a70f8c2c5016bd65d9116b6d8",
+   "sha256": "dcc51bbe78870427e18cdc827508318659bd1c4a70f8c2c5016bd65d9116b6d8",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/replay-off.svg",
    "path": "obs/icons/replay-off.svg",
-   "source_sha256": "58e16e7d9794026ec294df715cf6925d2c2dc59dac95c5d8ac010e05c905078f",
-   "sha256": "58e16e7d9794026ec294df715cf6925d2c2dc59dac95c5d8ac010e05c905078f",
+   "source_sha256": "52781c53403707f0e6c518b7c09580afe6d4d3e18559c5e454bcd68dd776723e",
+   "sha256": "52781c53403707f0e6c518b7c09580afe6d4d3e18559c5e454bcd68dd776723e",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/replay-on.png",
    "path": "obs/icons/replay-on.png",
-   "source_sha256": "fbed739e0145f8164ab662bb5a75bc38fadbd8c305005ce0984ca7e0a8e182a4",
-   "sha256": "fbed739e0145f8164ab662bb5a75bc38fadbd8c305005ce0984ca7e0a8e182a4",
+   "source_sha256": "22c87b4c47f5ee6031d9a4a7bb08ae464be053e0432953d050572cde9d75162e",
+   "sha256": "22c87b4c47f5ee6031d9a4a7bb08ae464be053e0432953d050572cde9d75162e",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/replay-on.svg",
    "path": "obs/icons/replay-on.svg",
-   "source_sha256": "b9cdec5bcc36ae879649954e21b2810623e5f85d4bff42022f62538c9502c87d",
-   "sha256": "b9cdec5bcc36ae879649954e21b2810623e5f85d4bff42022f62538c9502c87d",
+   "source_sha256": "9e9fff8eaeb3ca208843a23f7480a52b41525df40e525243ddac9022cce57431",
+   "sha256": "9e9fff8eaeb3ca208843a23f7480a52b41525df40e525243ddac9022cce57431",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/scene-active.png",
    "path": "obs/icons/scene-active.png",
-   "source_sha256": "b2156f44aa7f28f3523894861ab5a54fef1b4f82182db7c906a1a464c323a4df",
-   "sha256": "b2156f44aa7f28f3523894861ab5a54fef1b4f82182db7c906a1a464c323a4df",
+   "source_sha256": "880fe312906423fe7e6a1a5a83ebba2bf01ea2e342308b49bfd8d5785a792970",
+   "sha256": "880fe312906423fe7e6a1a5a83ebba2bf01ea2e342308b49bfd8d5785a792970",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/scene-active.svg",
    "path": "obs/icons/scene-active.svg",
-   "source_sha256": "93ad2562ab53b9336c61b6b6ed00ec4d59d951a8163b06de8d3e9e9e08367a9c",
-   "sha256": "93ad2562ab53b9336c61b6b6ed00ec4d59d951a8163b06de8d3e9e9e08367a9c",
+   "source_sha256": "861b5e059e5b08585facdc5d9d3252074953a0eda3f600767dc47333b740d071",
+   "sha256": "861b5e059e5b08585facdc5d9d3252074953a0eda3f600767dc47333b740d071",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/scene-inactive.png",
    "path": "obs/icons/scene-inactive.png",
-   "source_sha256": "2309c26b9b7969bd301eb38d0fb79e15a5849803c769a8c2a7d20faba1476817",
-   "sha256": "2309c26b9b7969bd301eb38d0fb79e15a5849803c769a8c2a7d20faba1476817",
+   "source_sha256": "ce0cffbe5dfde4234e289d127a921984f950978a96fa8434b415b53e56359b7b",
+   "sha256": "ce0cffbe5dfde4234e289d127a921984f950978a96fa8434b415b53e56359b7b",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/scene-inactive.svg",
    "path": "obs/icons/scene-inactive.svg",
-   "source_sha256": "25e065c0c85ecfdf8574c568206dd2cbf845e0f1ab20007ab892ec95ddef092d",
-   "sha256": "25e065c0c85ecfdf8574c568206dd2cbf845e0f1ab20007ab892ec95ddef092d",
+   "source_sha256": "e36e4f33b5015578148bdf467a89f7bde5441b79040afc5dc5bc112b3f070bba",
+   "sha256": "e36e4f33b5015578148bdf467a89f7bde5441b79040afc5dc5bc112b3f070bba",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/stream-live.png",
    "path": "obs/icons/stream-live.png",
-   "source_sha256": "c56de97de6baeb94ada630c01535afa92d988bc31138feb0264e2d64360d62d6",
-   "sha256": "c56de97de6baeb94ada630c01535afa92d988bc31138feb0264e2d64360d62d6",
+   "source_sha256": "a073f675d38e59db866e5518af0c52f16580fec946aa6967239b420113001e64",
+   "sha256": "a073f675d38e59db866e5518af0c52f16580fec946aa6967239b420113001e64",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/stream-live.svg",
    "path": "obs/icons/stream-live.svg",
-   "source_sha256": "42216adb2744307306be35f4de2b763690d828c10a9b69a9db1593ecad3e338c",
-   "sha256": "42216adb2744307306be35f4de2b763690d828c10a9b69a9db1593ecad3e338c",
+   "source_sha256": "33ee8f2f9909c00589a90795bef64d7ccafb605b047912fbf64ab87c00144d93",
+   "sha256": "33ee8f2f9909c00589a90795bef64d7ccafb605b047912fbf64ab87c00144d93",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/stream-off.png",
    "path": "obs/icons/stream-off.png",
-   "source_sha256": "9b334c71f23a290cb41041bf9225e6d9df8261a527fa2dd5035bd197c54ad923",
-   "sha256": "9b334c71f23a290cb41041bf9225e6d9df8261a527fa2dd5035bd197c54ad923",
+   "source_sha256": "5deea07c912cd12d4fd0ef46db92f1d450e63db41af672b96e3049d6bfa3879d",
+   "sha256": "5deea07c912cd12d4fd0ef46db92f1d450e63db41af672b96e3049d6bfa3879d",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/stream-off.svg",
    "path": "obs/icons/stream-off.svg",
-   "source_sha256": "b5070d0c1e0e6ce37da2375d701fb3afdad24f20296c9b4ad2fb6adfb7be1692",
-   "sha256": "b5070d0c1e0e6ce37da2375d701fb3afdad24f20296c9b4ad2fb6adfb7be1692",
+   "source_sha256": "b30c94be79fe0a6baabf8063aab06b28f6143168cc1528f219755d88aadf7e1a",
+   "sha256": "b30c94be79fe0a6baabf8063aab06b28f6143168cc1528f219755d88aadf7e1a",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/virtualcam-off.png",
    "path": "obs/icons/virtualcam-off.png",
-   "source_sha256": "48224092a84e77ed512d93182164655675bea23fcf178cb5f91554a009177936",
-   "sha256": "48224092a84e77ed512d93182164655675bea23fcf178cb5f91554a009177936",
+   "source_sha256": "b19ef0546f88409bfda1a95e4c7f0d2567d06a2186ad9a41c3dc116be8a33411",
+   "sha256": "b19ef0546f88409bfda1a95e4c7f0d2567d06a2186ad9a41c3dc116be8a33411",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/virtualcam-off.svg",
    "path": "obs/icons/virtualcam-off.svg",
-   "source_sha256": "16036517cd2d07da77ef45f88a4ca506027894644fe46a7c9d53763f9cc8899b",
-   "sha256": "16036517cd2d07da77ef45f88a4ca506027894644fe46a7c9d53763f9cc8899b",
+   "source_sha256": "616f8ca2657cda4992e188dd4400e8cb4277944c91e1852c66dee52e93044375",
+   "sha256": "616f8ca2657cda4992e188dd4400e8cb4277944c91e1852c66dee52e93044375",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/virtualcam-on.png",
    "path": "obs/icons/virtualcam-on.png",
-   "source_sha256": "5fe4930aa5b49969f846298e55b4c4b830f38209576d30c47e53232c7810d3b3",
-   "sha256": "5fe4930aa5b49969f846298e55b4c4b830f38209576d30c47e53232c7810d3b3",
+   "source_sha256": "0aedc3111af7b3925c2b3086336a256806aad4c4383882e214375d23d9cd7fa9",
+   "sha256": "0aedc3111af7b3925c2b3086336a256806aad4c4383882e214375d23d9cd7fa9",
    "transforms": []
   },
   {
    "source": "plugins/obs/icons/virtualcam-on.svg",
    "path": "obs/icons/virtualcam-on.svg",
-   "source_sha256": "2412e0e55aa794cf56149837ab9382fda6c2e69d67daaa4a92ab3d3ed2e63324",
-   "sha256": "2412e0e55aa794cf56149837ab9382fda6c2e69d67daaa4a92ab3d3ed2e63324",
+   "source_sha256": "3a5e91a2a68dfc1741edc42555d873d0ab4b2ba2232371a5a2d32509eb0978c8",
+   "sha256": "3a5e91a2a68dfc1741edc42555d873d0ab4b2ba2232371a5a2d32509eb0978c8",
    "transforms": []
   },
   {
    "source": "plugins/obs/manifest.json",
    "path": "obs/manifest.json",
-   "source_sha256": "a50d837d9b11642721e2ee4ddb62f4a23b513423a5599b33edf6f223ea9eb976",
-   "sha256": "a50d837d9b11642721e2ee4ddb62f4a23b513423a5599b33edf6f223ea9eb976",
+   "source_sha256": "77774b0a441a0a90cdf1f143fbf22c00c3335953319b7d274539cf421a87af83",
+   "sha256": "77774b0a441a0a90cdf1f143fbf22c00c3335953319b7d274539cf421a87af83",
    "transforms": []
   },
   {
@@ -2574,15 +2581,36 @@
   {
    "source": "plugins/obs/src/plugin.rs",
    "path": "obs/src/plugin.rs",
-   "source_sha256": "67d3d42c0e20eae8e74377a837129c2b8360928fb832a0f7b348ac6e759c7def",
-   "sha256": "67d3d42c0e20eae8e74377a837129c2b8360928fb832a0f7b348ac6e759c7def",
+   "source_sha256": "0a03d91b1c7c3ef526a33862a595470ba9f9fc9289e2ad10c6fe8b2529040485",
+   "sha256": "0a03d91b1c7c3ef526a33862a595470ba9f9fc9289e2ad10c6fe8b2529040485",
+   "transforms": []
+  },
+  {
+   "source": "plugins/obs/src/plugin/benchmark.rs",
+   "path": "obs/src/plugin/benchmark.rs",
+   "source_sha256": "156b9449970838d57e5bac3815e1b9d812830c9848bf81fa8aaa9f6dd8c0dc29",
+   "sha256": "156b9449970838d57e5bac3815e1b9d812830c9848bf81fa8aaa9f6dd8c0dc29",
+   "transforms": []
+  },
+  {
+   "source": "plugins/obs/src/plugin/event_tests.rs",
+   "path": "obs/src/plugin/event_tests.rs",
+   "source_sha256": "c6c47b43146d42086112ebd874339d5181ac06203cd3108583ff9f6353fdf7a1",
+   "sha256": "c6c47b43146d42086112ebd874339d5181ac06203cd3108583ff9f6353fdf7a1",
    "transforms": []
   },
   {
    "source": "plugins/obs/src/plugin/tests.rs",
    "path": "obs/src/plugin/tests.rs",
-   "source_sha256": "f7747127e4e27b4916cc166f42d89b27d5a61fa02684d570bfb68cbacafab264",
-   "sha256": "f7747127e4e27b4916cc166f42d89b27d5a61fa02684d570bfb68cbacafab264",
+   "source_sha256": "eff8f78d5997f6573001735c0f25e2d61b753d9553e30a21c1427ee539220b0e",
+   "sha256": "eff8f78d5997f6573001735c0f25e2d61b753d9553e30a21c1427ee539220b0e",
+   "transforms": []
+  },
+  {
+   "source": "plugins/obs/src/plugin/wake.rs",
+   "path": "obs/src/plugin/wake.rs",
+   "source_sha256": "78f43d92d5b38b7be8931b9474d627d4cb41316bea04cf96a1d5f29ea0d565ed",
+   "sha256": "78f43d92d5b38b7be8931b9474d627d4cb41316bea04cf96a1d5f29ea0d565ed",
    "transforms": []
   },
   {
@@ -2595,22 +2623,29 @@
   {
    "source": "plugins/obs/src/transport.rs",
    "path": "obs/src/transport.rs",
-   "source_sha256": "81684d6d28615fb41af1d6fd86ef372cc9f7ec1664b31308b92ad5eaba36cc98",
-   "sha256": "81684d6d28615fb41af1d6fd86ef372cc9f7ec1664b31308b92ad5eaba36cc98",
+   "source_sha256": "1ac4c90d598219fe61ce5f59663123523ed808eff088f03cb5351f43bc3020a8",
+   "sha256": "1ac4c90d598219fe61ce5f59663123523ed808eff088f03cb5351f43bc3020a8",
    "transforms": []
   },
   {
    "source": "plugins/obs/src/workflow.rs",
    "path": "obs/src/workflow.rs",
-   "source_sha256": "8105a3864a820179b9e86ccd236e0352a4b4aeaa69f64076990911e068f59e60",
-   "sha256": "8105a3864a820179b9e86ccd236e0352a4b4aeaa69f64076990911e068f59e60",
+   "source_sha256": "d1e44013e3ebd925b96a3c57f05b07ea69a747d9eb02d1314f235168b2452aca",
+   "sha256": "d1e44013e3ebd925b96a3c57f05b07ea69a747d9eb02d1314f235168b2452aca",
    "transforms": []
   },
   {
    "source": "plugins/obs/tests/backoff.rs",
    "path": "obs/tests/backoff.rs",
-   "source_sha256": "f52d5fcdd32fd5a510adfd77587086386a5863ec572d95c79363453f9773b5c2",
-   "sha256": "f52d5fcdd32fd5a510adfd77587086386a5863ec572d95c79363453f9773b5c2",
+   "source_sha256": "2ef03eff25b5e93069fb8014218fda42e8a24544091b1dcbf5a2e4f30827b158",
+   "sha256": "2ef03eff25b5e93069fb8014218fda42e8a24544091b1dcbf5a2e4f30827b158",
+   "transforms": []
+  },
+  {
+   "source": "plugins/obs/tests/icons.rs",
+   "path": "obs/tests/icons.rs",
+   "source_sha256": "250df1d1124482671e91aec81cd58688071437ddc7df9cf86e564ee660189cd0",
+   "sha256": "250df1d1124482671e91aec81cd58688071437ddc7df9cf86e564ee660189cd0",
    "transforms": []
   },
   {

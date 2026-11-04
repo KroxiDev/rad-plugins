@@ -4,9 +4,6 @@ use crate::{Pactl, Selector, Snapshot, Timing, devices::Kind, monitor::Monitor, 
 use rad_plugin_sdk::{Subscription, SubscriptionId, VisualContent, VisualState};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
-const ON_COLOUR: [u8; 4] = [40, 167, 69, 255];
-const MUTED_COLOUR: [u8; 4] = [220, 53, 69, 255];
-
 enum Cache {
     /// No picture yet.
     Loading,
@@ -49,16 +46,12 @@ fn visual_state(kind: Kind, selector: &Selector, cache: &Cache) -> Option<Visual
         Cache::Down => Some(VisualState::Unavailable),
         Cache::Ready(snapshot) => Some(match snapshot.resolve(kind, selector) {
             Some(device) => {
-                let (text, color) = if device.muted {
-                    ("Muted", MUTED_COLOUR)
-                } else {
-                    ("On", ON_COLOUR)
-                };
+                let text = if device.muted { "Muted" } else { "On" };
                 VisualState::Current {
                     content: VisualContent {
                         state: Some(if device.muted { "muted" } else { "unmuted" }.into()),
                         text: Some(text.into()),
-                        color: Some(color),
+                        color: None,
                         ..VisualContent::default()
                     },
                 }

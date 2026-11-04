@@ -88,7 +88,7 @@ fn an_action_during_backoff_runs_once_when_obs_accepts() {
     send(
         &mut host,
         1,
-        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":0}}),
+        json!({"kind":"hello","capabilities":["credentials","dynamic_options","response_timeout","visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.obs","plugin_version":{"major":0,"minor":4,"patch":1}}),
     );
     let ready = recv(&mut host);
     let manifest: Value = serde_json::from_str(include_str!("../manifest.json")).unwrap();

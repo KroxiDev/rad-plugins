@@ -1,6 +1,6 @@
 [package]
 name = "rad-plugin-obs"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 publish = false
 license = { workspace = true }
@@ -34,3 +34,6 @@ name = "obs-readonly-relay"
 path = "examples/readonly-relay.rs"
 required-features = ["test-support"]
 test = true
+
+[dev-dependencies]
+image = { version = "=0.25.10", default-features = false, features = ["png"] }

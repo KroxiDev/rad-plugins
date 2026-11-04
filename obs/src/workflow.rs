@@ -316,6 +316,12 @@ impl Workflow {
         flow.want = want;
         Ok(flow)
     }
+    /// Only confirmation polls wait; prerequisites and the command can proceed immediately.
+    pub fn confirming(&self) -> bool {
+        self.calls
+            .front()
+            .is_some_and(|call| call.step == Step::Confirm)
+    }
     pub fn request(&self) -> Option<(&str, Value)> {
         self.calls.front().map(|c| (c.name, c.data.clone()))
     }

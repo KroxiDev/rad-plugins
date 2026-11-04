@@ -1,6 +1,6 @@
 # RAD plugin contract v1
 
-Published contract major **1**, SDK **0.3.0**; official Audio and OBS **0.4.0**,
+Published contract major **1**, SDK **0.3.0**; official Audio and OBS **0.4.1**,
 Media and Metrics **0.3.0**. Target: `x86_64-unknown-linux-gnu`. SDK 0.3.0 adds the
 `labels` and `visual_states` capabilities and a fixed response budget; packages
 that use them need RAD 0.1.6 or later. This document describes the first published major;

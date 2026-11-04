@@ -12,8 +12,8 @@ La documentación canónica para autores está en
 - [Guía para autores](https://github.com/KroxiDev/rad-plugins/blob/sdk-v0.3.0/docs/author-guide.md)
 - [Paquetes publicados](https://github.com/KroxiDev/rad-plugins/releases)
 
-Para trabajar en este repositorio, consultar el [índice técnico](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/README.md)
-y la [validación completa](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md). Esta guía describe el workspace de
+Para trabajar en este repositorio, consultar el [índice técnico](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/README.md)
+y la [validación completa](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md). Esta guía describe el workspace de
 extensiones, no define un segundo contrato de plugins.
 
 El contrato v1 usa una versión mayor y capacidades negociadas, capturas inmutables
@@ -22,7 +22,7 @@ SDK no bloqueante y acotada. Las antiguas API lineales del host 2/3 no son el
 contrato v1. Usar versiones compatibles del host y los plugins; instalar un RAD
 nuevo no actualiza silenciosamente los paquetes instalados.
 La lista de oficiales del editor
-([official.rs](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/crates/rad-editor/src/official.rs)) indica la release vigente de
+([official.rs](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/crates/rad-editor/src/official.rs)) indica la release vigente de
 cada uno: publicar una release oficial requiere actualizar su entrada allí.
 Los paquetes prerelease ya instalados permanecen como inventario de solo lectura
 hasta actualizarlos: se conservan sus metadatos originales y su versión anterior,
@@ -37,6 +37,10 @@ paquetes sigue disponible.
 | [`obs`](obs) | `rad-plugin-obs` | Acciones de OBS, opciones dinámicas y estado visual. |
 | [`metrics`](metrics) | `rad-plugin-metrics` | Estado visual de CPU/RAM y GPU/VRAM NVIDIA. |
 
+Los iconos PNG de estado de los plugins oficiales tienen un presupuesto máximo
+de **4 KiB por icono** (8192 caracteres hexadecimales). El manifest completo sigue
+limitado a **64 KiB**, incluidos todos sus iconos.
+
 Los fixtures son instrumentos de prueba, nunca artefactos de release. Los tests
 no certifican hardware real, todas las distribuciones ni la seguridad de un plugin
 nativo arbitrario.
@@ -45,7 +49,7 @@ nativo arbitrario.
 
 Desde el directorio `plugins`, con dependencias y herramientas ya disponibles.
 Estos comandos focalizados no sustituyen el gate completo de
-[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md):
+[Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md):
 
 ```sh
 cargo build --locked --release --workspace --all-features --bins --examples

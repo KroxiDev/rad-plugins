@@ -1,7 +1,7 @@
 # Source provenance
 
-Canonical source: [KroxiDev/RAD at `eb86e1cc596dd63e07a38d89e03011284682b49f`](https://github.com/KroxiDev/RAD/tree/eb86e1cc596dd63e07a38d89e03011284682b49f)
-(RAD 0.1.6-1).
+Canonical source: [KroxiDev/RAD at `98fb7ce54a65cf38e57a697b4edbddf598d6319e`](https://github.com/KroxiDev/RAD/tree/98fb7ce54a65cf38e57a697b4edbddf598d6319e)
+(RAD `beta` after PR #16; source of Audio and OBS 0.4.1).
 
 The SDK and official plugins are maintained alongside the RAD Host so both peers
 change atomically. This repository distributes a snapshot of that commit's

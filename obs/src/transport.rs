@@ -3,7 +3,7 @@ use rad_plugin_sdk::FailureCode;
 use std::{
     io,
     net::{SocketAddrV4, TcpStream},
-    os::fd::FromRawFd,
+    os::fd::{AsRawFd, FromRawFd},
 };
 use tungstenite::{
     HandshakeError, Message, WebSocket,
@@ -103,6 +103,20 @@ impl Transport {
             Err(HandshakeError::Failure(_)) => return Err(FailureCode::Unavailable),
         };
         Ok(())
+    }
+    /// Readiness only: the worker keeps exclusive ownership of all socket I/O.
+    pub fn readiness(&self) -> Option<libc::pollfd> {
+        let (fd, events) = match &self.state {
+            State::Tcp(stream) => (stream.as_raw_fd(), libc::POLLOUT),
+            State::Handshake(mid) => (mid.get_ref().get_ref().as_raw_fd(), libc::POLLIN),
+            State::Open(socket) => (socket.get_ref().as_raw_fd(), libc::POLLIN),
+            State::Broken => return None,
+        };
+        Some(libc::pollfd {
+            fd,
+            events,
+            revents: 0,
+        })
     }
     pub fn send(&mut self, text: String) -> Result<(), FailureCode> {
         if text.len() > 32768 {

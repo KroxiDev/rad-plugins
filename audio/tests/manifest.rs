@@ -14,9 +14,9 @@ fn the_manifest_and_the_code_declare_the_same_identity_and_host_api() {
     let config = config();
     assert_eq!(manifest["contract"], 1);
     assert_eq!(manifest["id"], config.id);
-    assert_eq!(manifest["version"], json!({"major":0,"minor":4,"patch":0}));
+    assert_eq!(manifest["version"], json!({"major":0,"minor":4,"patch":1}));
     assert_eq!(config.version.major, 0);
-    assert_eq!((config.version.minor, config.version.patch), (4, 0));
+    assert_eq!((config.version.minor, config.version.patch), (4, 1));
     assert_eq!(manifest["host_min"], *config.host_api.start());
     assert_eq!(manifest["host_max"], *config.host_api.end());
     assert_eq!(manifest["host_min"], 1);

@@ -2,7 +2,7 @@
 
 Referencia de la integración oficial para desarrolladores y agentes. Silencia,
 reactiva y alterna el **micrófono** y la **salida de audio**, y muestra si cada uno
-está silenciado. ID `org.rad.audio`, versión 0.4.0, Linux x86_64, contrato de plugins
+está silenciado. ID `org.rad.audio`, versión 0.4.1, Linux x86_64, contrato de plugins
 v1. Las capacidades negociadas están en el [contrato y la guía para autores](../README.md).
 
 ## Requisitos
@@ -25,13 +25,13 @@ disponible hasta que vuelva el servidor.
 
 El editor muestra las operaciones como «Alternar», «Silenciar» y «Activar
 sonido», con el resto de los textos traducidos en el manifest
-([ADR 0020](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)). El
+([ADR 0020](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)). El
 dispositivo se elige primero.
 
 | Estado | Muestra |
 | --- | --- |
-| Estado de salida de audio | `On` (verde) o `Muted` (rojo) |
-| Estado de micrófono | `On` (verde) o `Muted` (rojo) |
+| Estado de salida de audio | Ícono de salida activa o silenciada |
+| Estado de micrófono | Ícono de micrófono activo o silenciado |
 
 El **dispositivo** es *Default device (follows changes)* o un dispositivo concreto.
 
@@ -61,7 +61,7 @@ tardar hasta 30 s en detectar que volvió.
 
 Desde el directorio `plugins`, con las dependencias ya disponibles. El ejemplo
 escribe un paquete local, no una publicación; para la caché offline y el gate
-completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/eb86e1cc596dd63e07a38d89e03011284682b49f/docs/testing.md).
+completo, seguir [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md).
 
 ```sh
 cargo build --release -p rad-plugin-audio

@@ -57,7 +57,7 @@ impl Host {
         host.send(
             1,
             json!({"kind":"hello","capabilities":["dynamic_options","visual_freshness","visual_states"],"host_api":1,"target":"x86_64-unknown-linux-gnu",
-                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":4,"patch":0}}),
+                   "plugin_id":"org.rad.audio","plugin_version":{"major":0,"minor":4,"patch":1}}),
         );
         let ready = host
             .take(|f| f["message"]["kind"] == "ready", Duration::from_secs(5))
@@ -203,23 +203,6 @@ impl Host {
             state["availability"].as_str().unwrap().to_owned(),
             state["content"]["text"].as_str().map(str::to_owned),
         ))
-    }
-
-    /// The colour of the next visual of `subscription`, as RGBA, with its availability.
-    pub fn next_visual_colour(
-        &mut self,
-        subscription: u64,
-        within: Duration,
-    ) -> Option<(String, Option<[u8; 4]>)> {
-        let frame = self.take(
-            |f| f["correlation"]["request"] == subscription && f["message"]["kind"] == "visual",
-            within,
-        )?;
-        let state = &frame["message"]["state"];
-        let colour = state["content"]["color"]
-            .as_array()
-            .map(|c| [0, 1, 2, 3].map(|i| c[i].as_u64().unwrap() as u8));
-        Some((state["availability"].as_str().unwrap().to_owned(), colour))
     }
 
     /// Waits until a visual of `subscription` shows `(availability, text)`; the full sequence it
