@@ -1,7 +1,7 @@
 # RAD plugin contract v1
 
 Published contract major **1**, SDK **0.3.0**; official Audio and OBS **0.4.1**,
-Media and Metrics **0.3.0**. Target: `x86_64-unknown-linux-gnu`. SDK 0.3.0 adds the
+Media **0.3.0** and Metrics **0.4.0**. Target: `x86_64-unknown-linux-gnu`. SDK 0.3.0 adds the
 `labels` and `visual_states` capabilities and a fixed response budget; packages
 that use them need RAD 0.1.6 or later. This document describes the first published major;
 the prerelease linear host APIs 2/3 are not earlier contract majors. They require
@@ -87,6 +87,9 @@ individual strings are at most 4096 bytes. Parameters must match the schema;
 unknown keys, missing required values and out-of-range values fail validation.
 An absent optional value is distinct from a supplied value. Saved dynamic values
 are not silently replaced when a current options list no longer contains them.
+RAD 0.2.3 and later show an absent optional fixed `choice` as its first option
+without storing it; use that option as the plugin's default so the visible
+choice matches its behavior.
 
 With `labels`, a fixed option may carry the text the user reads:
 `{"value":"toggle","label":"Toggle"}`. Parameters always store `value`; a plain

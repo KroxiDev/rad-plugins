@@ -3,7 +3,7 @@
   "id": "org.rad.metrics",
   "version": {
     "major": 0,
-    "minor": 3,
+    "minor": 4,
     "patch": 0
   },
   "host_min": 1,
@@ -18,16 +18,112 @@
       "label": "CPU total",
       "schema": {
         "version": 1,
-        "fields": []
+        "fields": [
+          {
+            "id": "style",
+            "label": "Style",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "bar",
+                  "label": "Usage bar"
+                }
+              ]
+            }
+          },
+          {
+            "id": "label",
+            "label": "Name",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "shown",
+                  "label": "Visible"
+                },
+                {
+                  "value": "hidden",
+                  "label": "Hidden"
+                }
+              ]
+            }
+          }
+        ]
       },
       "credential_slots": []
     },
     {
       "id": "ram",
-      "label": "RAM used / available",
+      "label": "RAM used / total",
       "schema": {
         "version": 1,
-        "fields": []
+        "fields": [
+          {
+            "id": "style",
+            "label": "Style",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "bar",
+                  "label": "Usage bar"
+                }
+              ]
+            }
+          },
+          {
+            "id": "value",
+            "label": "Value",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "used_total",
+                  "label": "Current and total"
+                },
+                {
+                  "value": "used",
+                  "label": "Current only"
+                },
+                {
+                  "value": "percent",
+                  "label": "Percentage"
+                }
+              ]
+            }
+          },
+          {
+            "id": "label",
+            "label": "Name",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "shown",
+                  "label": "Visible"
+                },
+                {
+                  "value": "hidden",
+                  "label": "Hidden"
+                }
+              ]
+            }
+          }
+        ]
       },
       "credential_slots": []
     },
@@ -36,7 +132,44 @@
       "label": "NVIDIA GPU utilization",
       "schema": {
         "version": 1,
-        "fields": []
+        "fields": [
+          {
+            "id": "style",
+            "label": "Style",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "bar",
+                  "label": "Usage bar"
+                }
+              ]
+            }
+          },
+          {
+            "id": "label",
+            "label": "Name",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "shown",
+                  "label": "Visible"
+                },
+                {
+                  "value": "hidden",
+                  "label": "Hidden"
+                }
+              ]
+            }
+          }
+        ]
       },
       "credential_slots": []
     },
@@ -45,7 +178,66 @@
       "label": "NVIDIA VRAM used / total",
       "schema": {
         "version": 1,
-        "fields": []
+        "fields": [
+          {
+            "id": "style",
+            "label": "Style",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "bar",
+                  "label": "Usage bar"
+                }
+              ]
+            }
+          },
+          {
+            "id": "value",
+            "label": "Value",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "used_total",
+                  "label": "Current and total"
+                },
+                {
+                  "value": "used",
+                  "label": "Current only"
+                },
+                {
+                  "value": "percent",
+                  "label": "Percentage"
+                }
+              ]
+            }
+          },
+          {
+            "id": "label",
+            "label": "Name",
+            "required": false,
+            "kind": {
+              "type": "choice",
+              "options": [
+                {
+                  "value": "shown",
+                  "label": "Visible"
+                },
+                {
+                  "value": "hidden",
+                  "label": "Hidden"
+                }
+              ]
+            }
+          }
+        ]
       },
       "credential_slots": []
     }
@@ -56,9 +248,19 @@
   ],
   "translations": {
     "es": {
-      "RAM used / available": "RAM usada / disponible",
       "NVIDIA GPU utilization": "Uso de GPU NVIDIA",
-      "NVIDIA VRAM used / total": "VRAM NVIDIA usada / total"
+      "NVIDIA VRAM used / total": "VRAM NVIDIA usada / total",
+      "RAM used / total": "RAM usada / total",
+      "Style": "Estilo",
+      "Text": "Texto",
+      "Usage bar": "Barra de uso",
+      "Value": "Valor",
+      "Current and total": "Actual y total",
+      "Current only": "Solo actual",
+      "Percentage": "Porcentaje",
+      "Name": "Nombre",
+      "Visible": "Visible",
+      "Hidden": "Oculto"
     }
   }
 }

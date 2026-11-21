@@ -577,9 +577,10 @@ dependencies = [
 
 [[package]]
 name = "rad-plugin-metrics"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "libc",
+ "png",
  "rad-plugin-sdk",
  "serde_json",
 ]

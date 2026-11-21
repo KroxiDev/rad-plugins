@@ -1,7 +1,9 @@
 //! Shared, bounded metrics for RAD visual sources.
+mod bar;
 pub mod nvml;
 mod plugin;
 pub mod polling;
+mod presentation;
 pub mod readings;
 pub use plugin::{MetricsPlugin, config};
 pub mod reader;

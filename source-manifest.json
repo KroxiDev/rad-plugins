@@ -1,7 +1,7 @@
 {
  "version": 1,
  "repository": "https://github.com/KroxiDev/RAD",
- "commit": "98fb7ce54a65cf38e57a697b4edbddf598d6319e",
+ "commit": "9337835a9f9f55efe40d796d0d7dc5ba1b8e27e7",
  "files": [
   {
    "source": "plugins/.gitignore",
@@ -13,8 +13,8 @@
   {
    "source": "plugins/Cargo.lock",
    "path": "Cargo.lock",
-   "source_sha256": "763fd252cd194e041ab30bd1604a5c13ab643c6fe89b03f26aa94f6921492145",
-   "sha256": "763fd252cd194e041ab30bd1604a5c13ab643c6fe89b03f26aa94f6921492145",
+   "source_sha256": "03697fe62656fbd9a9e2fadd46c62cdfc8f54b673b7b451a6492e6e3404d8a5d",
+   "sha256": "03697fe62656fbd9a9e2fadd46c62cdfc8f54b673b7b451a6492e6e3404d8a5d",
    "transforms": []
   },
   {
@@ -36,8 +36,8 @@
   {
    "source": "plugins/README.md",
    "path": "README.md",
-   "source_sha256": "c64413c3cefc7a9b9affeb8ec90a190867e575e1c0161af1545107767d543c13",
-   "sha256": "81530d0ec8167197517fd6649abcb495116360ef903b24c1ed95cf003a0ef96d",
+   "source_sha256": "78f4e7923a4df7af389e4c1adb1094c6d51d32a935fd316e210d9c17891238b5",
+   "sha256": "bac9cc2b8439fc1aff1aa1c061e1cbebbc2469db054f7978cf3e49ad1e171cd6",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit",
     "Add source-provenance section"
@@ -54,7 +54,7 @@
    "source": "plugins/audio/README.md",
    "path": "audio/README.md",
    "source_sha256": "44017878781c9d32323041c0816847993429c92a5e379011d9f4b0a84f33913d",
-   "sha256": "7fbf21c4278322da11177933a54ae4c9356e77cdae50c1c1fc861ce45e50b9b8",
+   "sha256": "5ca5e6795af9cb694ffc52f7469cbccd70a3b9168ebfe82f50aa47b5dbaefbf8",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -469,7 +469,7 @@
    "source": "plugins/media/README.md",
    "path": "media/README.md",
    "source_sha256": "b74c7032d3a095fece50730933c078027de5d30da521abb2c1984bdd52e4b619",
-   "sha256": "c86a06f3422547a12139a6bd3004640819cbab81363eaec9fae188186964d13d",
+   "sha256": "b99c4e3779ae17ac1aa1c8039d93592715b812895660d1988686c82ba623e04a",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -731,8 +731,8 @@
   {
    "source": "plugins/metrics/Cargo.toml",
    "path": "metrics/Cargo.toml",
-   "source_sha256": "48c6da57991072dc1a96d2906d96a16502bdc2db5a869c21457ca3dcf2dd830a",
-   "sha256": "48c6da57991072dc1a96d2906d96a16502bdc2db5a869c21457ca3dcf2dd830a",
+   "source_sha256": "88ca96c61ca6968b257fd4c639ec7496c66343fa7d482a934531e1628f3fb741",
+   "sha256": "88ca96c61ca6968b257fd4c639ec7496c66343fa7d482a934531e1628f3fb741",
    "transforms": []
   },
   {
@@ -745,15 +745,22 @@
   {
    "source": "plugins/metrics/manifest.json",
    "path": "metrics/manifest.json",
-   "source_sha256": "7fbe04b0a5b17897cf284df7d487bd5fb7d9c8940a7ac400c77b956c20172172",
-   "sha256": "7fbe04b0a5b17897cf284df7d487bd5fb7d9c8940a7ac400c77b956c20172172",
+   "source_sha256": "91ff7270b570520712a4dbcfd1a1c4c046203227ff791d5c28802e108b62695c",
+   "sha256": "91ff7270b570520712a4dbcfd1a1c4c046203227ff791d5c28802e108b62695c",
+   "transforms": []
+  },
+  {
+   "source": "plugins/metrics/src/bar.rs",
+   "path": "metrics/src/bar.rs",
+   "source_sha256": "0aa4a751a436ee6e89182818002438711ea3f1c209f14da7fbfb7be9775876f7",
+   "sha256": "0aa4a751a436ee6e89182818002438711ea3f1c209f14da7fbfb7be9775876f7",
    "transforms": []
   },
   {
    "source": "plugins/metrics/src/lib.rs",
    "path": "metrics/src/lib.rs",
-   "source_sha256": "5662d4aa1f7807b935b2327fbf64e5ba52385884c042465d0c23981fa314410e",
-   "sha256": "5662d4aa1f7807b935b2327fbf64e5ba52385884c042465d0c23981fa314410e",
+   "source_sha256": "8387d7bd518ad0771b7db8d5831820d5d324d9d41764950521a6d01a77f22b79",
+   "sha256": "8387d7bd518ad0771b7db8d5831820d5d324d9d41764950521a6d01a77f22b79",
    "transforms": []
   },
   {
@@ -773,22 +780,29 @@
   {
    "source": "plugins/metrics/src/plugin.rs",
    "path": "metrics/src/plugin.rs",
-   "source_sha256": "3a7ee5085e0f5f05abc28fec32226f95a42ad283e693b9dfff6d2455edf1e0b7",
-   "sha256": "3a7ee5085e0f5f05abc28fec32226f95a42ad283e693b9dfff6d2455edf1e0b7",
+   "source_sha256": "464224cc700eb13aa006dbe06e4222248c712d57af3eeb1e388fcc939f374831",
+   "sha256": "464224cc700eb13aa006dbe06e4222248c712d57af3eeb1e388fcc939f374831",
    "transforms": []
   },
   {
    "source": "plugins/metrics/src/plugin_tests.rs",
    "path": "metrics/src/plugin_tests.rs",
-   "source_sha256": "b2e9e0dc03f652ceb00d175e61515deb89b63744eb0913440434334a7e5209d4",
-   "sha256": "b2e9e0dc03f652ceb00d175e61515deb89b63744eb0913440434334a7e5209d4",
+   "source_sha256": "acb9256900f06cee0f3ea436298cb56b6aae75987a8ee49aa420993f862259f0",
+   "sha256": "acb9256900f06cee0f3ea436298cb56b6aae75987a8ee49aa420993f862259f0",
    "transforms": []
   },
   {
    "source": "plugins/metrics/src/polling.rs",
    "path": "metrics/src/polling.rs",
-   "source_sha256": "e5af49ba79e3ef1b966155e1c2a63b29e08336de7fc83640ea76cf889d969c9d",
-   "sha256": "e5af49ba79e3ef1b966155e1c2a63b29e08336de7fc83640ea76cf889d969c9d",
+   "source_sha256": "866baa6e00757b746e74bae5bd066d7427433eafecfa4af985f2d1a1793c4bf3",
+   "sha256": "866baa6e00757b746e74bae5bd066d7427433eafecfa4af985f2d1a1793c4bf3",
+   "transforms": []
+  },
+  {
+   "source": "plugins/metrics/src/presentation.rs",
+   "path": "metrics/src/presentation.rs",
+   "source_sha256": "5ea70548bc2d570acab07cd22bd17a5d5bf0c7738026e556f90c8dd7082d7fbb",
+   "sha256": "5ea70548bc2d570acab07cd22bd17a5d5bf0c7738026e556f90c8dd7082d7fbb",
    "transforms": []
   },
   {
@@ -836,8 +850,8 @@
   {
    "source": "plugins/metrics/tests/protocol.rs",
    "path": "metrics/tests/protocol.rs",
-   "source_sha256": "8800c3bdeb1d92b279b3b170253548cbc418dd7ea65b7b265c7a83c3c6d92ef2",
-   "sha256": "8800c3bdeb1d92b279b3b170253548cbc418dd7ea65b7b265c7a83c3c6d92ef2",
+   "source_sha256": "3edadd6d05634d49a4a296e7c04e4f9e2ff0450052b0a8c4dfce1e5bf34cbac3",
+   "sha256": "3edadd6d05634d49a4a296e7c04e4f9e2ff0450052b0a8c4dfce1e5bf34cbac3",
    "transforms": []
   },
   {
@@ -2265,7 +2279,7 @@
    "source": "plugins/obs/README.md",
    "path": "obs/README.md",
    "source_sha256": "9b011f120c0b2dbeb6ccc70cdf6eeec23690ac9783b1bf0fe31593542b99e4f2",
-   "sha256": "32b7df16f514f8884c588b5d66c91b756666ebfca6926b7b507cab186e3e9b89",
+   "sha256": "4cd878aa92cb426e408630dfa552f49ea5416f87e25da552fe5ce9cb65ef6689",
    "transforms": [
     "Rebase links: inside the snapshot stay relative, others pin the canonical commit"
    ]
@@ -2602,8 +2616,8 @@
   {
    "source": "plugins/obs/src/plugin/tests.rs",
    "path": "obs/src/plugin/tests.rs",
-   "source_sha256": "eff8f78d5997f6573001735c0f25e2d61b753d9553e30a21c1427ee539220b0e",
-   "sha256": "eff8f78d5997f6573001735c0f25e2d61b753d9553e30a21c1427ee539220b0e",
+   "source_sha256": "7db90c452c30e5bcd99a05b9e4272a48955b8b38d0ce171d7025efecd86e4ee4",
+   "sha256": "7db90c452c30e5bcd99a05b9e4272a48955b8b38d0ce171d7025efecd86e4ee4",
    "transforms": []
   },
   {

@@ -21,6 +21,44 @@ fn recv(s: &mut UnixStream) -> Value {
     s.read_exact(&mut b).unwrap();
     serde_json::from_slice(&b).unwrap()
 }
+fn handshake(host: &mut UnixStream) {
+    let manifest: Value = serde_json::from_str(include_str!("../manifest.json")).unwrap();
+    send(
+        host,
+        1,
+        json!({"kind":"hello","capabilities":["visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":manifest["version"]}),
+    );
+    let ready = recv(host);
+    assert_eq!(ready["message"]["kind"], "ready");
+    assert_eq!(ready["message"]["plugin_version"], manifest["version"]);
+}
+
+fn subscribe(host: &mut UnixStream, id: u64, source: &str, values: Value) {
+    send(
+        host,
+        id,
+        json!({"kind":"subscribe","source":source,"parameters":{"schema_version":1,"values":values}}),
+    );
+}
+
+fn recv_before(host: &mut UnixStream, deadline: Instant) -> Value {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    assert!(!remaining.is_zero(), "timed out waiting for a visual");
+    host.set_read_timeout(Some(remaining)).unwrap();
+    recv(host)
+}
+
+fn expect_unavailable(host: &mut UnixStream, id: u64) {
+    let deadline = Instant::now() + Duration::from_secs(4);
+    loop {
+        let frame = recv_before(host, deadline);
+        if frame["correlation"]["request"] == id {
+            assert_eq!(frame["message"]["state"]["availability"], "unavailable");
+            return;
+        }
+    }
+}
+
 #[test]
 fn no_blind_renewal_revives_stale_metrics_and_eof_does_not_join_driver() {
     let (release_tx, release_rx) = mpsc::channel();
@@ -45,15 +83,7 @@ fn no_blind_renewal_revives_stale_metrics_and_eof_does_not_join_driver() {
             .send(rad_plugin_sdk::run(config(), plugin, input, wire))
             .unwrap();
     });
-    send(
-        &mut host,
-        1,
-        json!({"kind":"hello","capabilities":["visual_freshness"],"host_api":1,"target":"x86_64-unknown-linux-gnu","plugin_id":"org.rad.metrics","plugin_version":{"major":0,"minor":3,"patch":0}}),
-    );
-    let ready = recv(&mut host);
-    assert_eq!(ready["message"]["kind"], "ready");
-    let manifest: Value = serde_json::from_str(include_str!("../manifest.json")).unwrap();
-    assert_eq!(ready["message"]["plugin_version"], manifest["version"]);
+    handshake(&mut host);
     send(
         &mut host,
         2,
@@ -92,4 +122,77 @@ fn no_blind_renewal_revives_stale_metrics_and_eof_does_not_join_driver() {
             .is_ok()
     );
     release_tx.send(()).unwrap();
+}
+
+#[test]
+fn simultaneous_vram_styles_follow_their_own_values_and_reject_invalid_parameters() {
+    use rad_plugin_metrics::readings::Memory;
+    let (samples, reader) = mpsc::channel();
+    let plugin = MetricsPlugin::with_reader(move || reader.recv().unwrap_or_default()).unwrap();
+    let (mut host, wire) = UnixStream::pair().unwrap();
+    host.set_read_timeout(Some(Duration::from_secs(4))).unwrap();
+    let input = wire.try_clone().unwrap();
+    let running = std::thread::spawn(move || rad_plugin_sdk::run(config(), plugin, input, wire));
+    handshake(&mut host);
+
+    subscribe(&mut host, 2, "vram", json!({}));
+    expect_unavailable(&mut host, 2);
+    subscribe(
+        &mut host,
+        3,
+        "vram",
+        json!({"style":"bar","value":"percent","label":"hidden"}),
+    );
+    expect_unavailable(&mut host, 3);
+    subscribe(&mut host, 4, "cpu", json!({}));
+    expect_unavailable(&mut host, 4);
+    // An in-flight read from the first demand epoch may still need to finish.
+    let gib = 1 << 30;
+    let sample = Sample {
+        cpu: Some(24),
+        vram: Some(Memory {
+            used: 2 * gib,
+            available: 6 * gib,
+            total: 8 * gib,
+        }),
+        ..Default::default()
+    };
+    samples.send(sample.clone()).unwrap();
+    samples.send(sample).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(4);
+    let mut seen = [false; 3];
+    while !seen.iter().all(|&current| current) {
+        let frame = recv_before(&mut host, deadline);
+        let id = frame["correlation"]["request"].as_u64().unwrap();
+        if frame["message"]["kind"] == "visual_renew" {
+            assert!(seen[(id - 2) as usize], "renewal before Current");
+            continue;
+        }
+        let state = &frame["message"]["state"];
+        assert_eq!(state["availability"], "current");
+        let content = &state["content"];
+        match id {
+            2 => {
+                assert_eq!(content["text"], "VRAM 2.0/8.0 GiB");
+                assert!(content["png_hex"].is_null());
+            }
+            3 => {
+                assert_eq!(content["text"], "25%");
+                assert!(content["png_hex"].as_str().unwrap().starts_with("89504e47"));
+            }
+            4 => assert_eq!(content["text"], "CPU 24%"),
+            _ => panic!("unexpected subscription {id}"),
+        }
+        seen[(id - 2) as usize] = true;
+    }
+    // Both sources are already current: accepting either bad choice would return Current.
+    for (id, source, values) in [
+        (5, "vram", json!({"style":"x"})),
+        (6, "cpu", json!({"value":"used"})),
+    ] {
+        subscribe(&mut host, id, source, values);
+        expect_unavailable(&mut host, id);
+    }
+    host.shutdown(std::net::Shutdown::Write).unwrap();
+    assert!(running.join().unwrap().is_ok());
 }

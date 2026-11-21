@@ -858,14 +858,7 @@ fn revision_churn_child() {
         assert_eq!(recv(&mut host)["message"]["kind"], "credentials_applied");
         send(&mut host, id + 1, start_recording(revision));
         let deadline = Instant::now() + Duration::from_secs(3);
-        loop {
-            if closed.load(Ordering::SeqCst) >= revision as usize {
-                break;
-            }
-            assert!(Instant::now() < deadline);
-            worker_turn(&shared, Instant::now());
-            std::thread::yield_now();
-        }
+        // The real worker owns I/O; wait for its reply without driving competing turns.
         assert_eq!(recv(&mut host)["message"]["outcome"]["status"], "success");
         send(
             &mut host,

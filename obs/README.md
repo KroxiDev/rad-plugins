@@ -3,7 +3,7 @@
 Referencia de la integración oficial para desarrolladores y agentes. Plugin
 independiente `org.rad.obs` (`rad-plugin-obs`), versión 0.4.1, contrato de plugins v1
 con capacidades negociadas de credenciales, ajustes, opciones, textos traducidos y
-plazo de respuesta ([ADR 0020](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)).
+plazo de respuesta ([ADR 0020](https://github.com/KroxiDev/RAD/blob/9337835a9f9f55efe40d796d0d7dc5ba1b8e27e7/docs/adr/0020-textos-de-plugins-y-plazo-fijo.md)).
 Consultar el [contrato y la guía para autores](../README.md).
 
 Se conecta únicamente a **127.0.0.1** mediante obs-websocket 5.x, RPC 1 y WebSocket
@@ -80,7 +80,7 @@ Las peticiones se detienen mientras OBS cambia de colección de escenas y las
 acciones en curso fallan. Durante la transición los visuales conservan su último
 estado sin publicar cambios ni renovaciones, incluso si vence el plazo de una
 lectura. Si se prolonga, el host marca la vigencia vencida según el
-[ADR 0008](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/adr/0008-frescura-declarada.md). Al terminar se releen todos
+[ADR 0008](https://github.com/KroxiDev/RAD/blob/9337835a9f9f55efe40d796d0d7dc5ba1b8e27e7/docs/adr/0008-frescura-declarada.md). Al terminar se releen todos
 los objetivos; los ausentes se declaran no disponibles. Las consultas de opciones
 se invalidan únicamente ante cambios de listas o de colección.
 La
@@ -99,7 +99,7 @@ endpoint del plugin.
 `obs-fixture` admite un puerto de prueba como argumento; sin argumentos, lee un
 archivo privado regular `0600` en `$XDG_RUNTIME_DIR/rad-obs-fixture.port`. Rechaza
 el puerto 4455 y nunca recurre a producción como alternativa.
-Compilar primero los helpers según [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/testing.md).
+Compilar primero los helpers según [Pruebas y validación](https://github.com/KroxiDev/RAD/blob/9337835a9f9f55efe40d796d0d7dc5ba1b8e27e7/docs/testing.md).
 
 El benchmark ignorado `time_to_order_real_worker` mide desde el envío de `invoke`
 por el SDK hasta la llegada de la orden al peer falso, con el worker real. Para
@@ -115,7 +115,7 @@ segunda acción por su primera petición al peer y el caso sin sesión abierta
 (excluye el arranque del proceso/SDK). `RAD_OBS_BENCH_ACTION=item` limita la
 medición a una operación; `queue` limita a la espera en cola. No forma parte del gate.
 
-La [evidencia real disponible](https://github.com/KroxiDev/RAD/blob/98fb7ce54a65cf38e57a697b4edbddf598d6319e/docs/performance.md#evidencia-y-límites)
+La [evidencia real disponible](https://github.com/KroxiDev/RAD/blob/9337835a9f9f55efe40d796d0d7dc5ba1b8e27e7/docs/performance.md#evidencia-y-límites)
 delimita las consultas OBS medidas mediante relay de solo lectura; no certifica
 acciones, autenticación directa ni todas las versiones, compilaciones o
 distribuciones de OBS.

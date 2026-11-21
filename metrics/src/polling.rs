@@ -1,6 +1,9 @@
 //! One worker per plugin. The timer never executes driver code or joins that worker.
-use crate::readings::Memory;
-use rad_plugin_sdk::{VisualContent, VisualState};
+use crate::{
+    presentation::{Presentation, Source},
+    readings::Memory,
+};
+use rad_plugin_sdk::VisualState;
 use std::{
     sync::{
         Arc,
@@ -47,48 +50,19 @@ pub struct Sample {
     pub gpu: Option<u32>,
     pub vram: Option<Memory>,
 }
-impl Sample {
-    fn contents(&self) -> [Option<VisualContent>; 4] {
-        fn percent(label: &str, value: Option<u32>) -> Option<String> {
-            value.filter(|v| *v <= 100).map(|v| format!("{label} {v}%"))
+#[derive(Clone, Copy)]
+pub(crate) struct Observation<'a> {
+    pub started: Duration,
+    pub stale: bool,
+    sample: &'a Sample,
+}
+impl Observation<'_> {
+    pub fn state(self, source: Source, presentation: &Presentation) -> VisualState {
+        match presentation.content(source, self.sample) {
+            Some(content) if self.stale => VisualState::Stale { content },
+            Some(content) => VisualState::Current { content },
+            None => VisualState::Unavailable,
         }
-        fn memory(label: &str, value: Option<Memory>, available: bool) -> Option<String> {
-            let m = value?;
-            if m.total == 0
-                || m.used > m.total
-                || m.available > m.total
-                || m.used.checked_add(m.available)? != m.total
-            {
-                return None;
-            }
-            let gib = 1073741824.0;
-            Some(if available {
-                format!(
-                    "{label} {:.1} GiB used {:.1} GiB avail",
-                    m.used as f64 / gib,
-                    m.available as f64 / gib
-                )
-            } else {
-                format!(
-                    "{label} {:.1}/{:.1} GiB",
-                    m.used as f64 / gib,
-                    m.total as f64 / gib
-                )
-            })
-        }
-        [
-            percent("CPU", self.cpu),
-            memory("RAM", self.ram, true),
-            percent("GPU", self.gpu),
-            memory("VRAM", self.vram, false),
-        ]
-        .map(|text| {
-            text.map(|text| VisualContent {
-                state: None,
-                text: Some(text),
-                ..Default::default()
-            })
-        })
     }
 }
 
@@ -165,10 +139,15 @@ impl Poller {
     pub fn tick(&mut self, now: Duration, active: bool) -> [VisualState; 4] {
         let mut demand = self.demand;
         demand.set([active; 4]);
-        self.tick_demand(now, demand)
+        let observation = self.tick_demand(now, demand);
+        Source::ALL.map(|source| {
+            observation.map_or(VisualState::Unavailable, |sample| {
+                sample.state(source, &Presentation::default())
+            })
+        })
     }
     /// Monotonic time from one fixed origin, not wall-clock time.
-    pub(crate) fn tick_demand(&mut self, now: Duration, demand: Demand) -> [VisualState; 4] {
+    pub(crate) fn tick_demand(&mut self, now: Duration, demand: Demand) -> Option<Observation<'_>> {
         if demand != self.demand {
             self.sample = None;
             self.demand = demand;
@@ -202,29 +181,19 @@ impl Poller {
                 }
             }
         }
-        match &self.sample {
-            None => std::array::from_fn(|_| VisualState::Unavailable),
-            Some((started, sample)) => {
-                let contents = sample.contents();
-                std::array::from_fn(|i| match &contents[i] {
-                    Some(content) if demand.sources[i] => {
-                        if now.saturating_sub(*started) >= MAX_AGE {
-                            VisualState::Stale {
-                                content: content.clone(),
-                            }
-                        } else {
-                            VisualState::Current {
-                                content: content.clone(),
-                            }
-                        }
-                    }
-                    _ => VisualState::Unavailable,
-                })
-            }
-        }
+        self.observation(now, demand)
     }
-    pub(crate) fn observation(&self) -> Option<Duration> {
-        self.sample.as_ref().map(|s| s.0)
+
+    pub(crate) fn observation(&self, now: Duration, demand: Demand) -> Option<Observation<'_>> {
+        if self.demand != demand {
+            return None;
+        }
+        let (started, sample) = self.sample.as_ref()?;
+        Some(Observation {
+            started: *started,
+            stale: now.saturating_sub(*started) >= MAX_AGE,
+            sample,
+        })
     }
     /// No idle timer once release has been acknowledged. A blocked reader remains terminal.
     pub(crate) fn wake_after(&self, now: Duration) -> Option<Duration> {
