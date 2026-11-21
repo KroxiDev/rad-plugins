@@ -97,7 +97,9 @@ query's dependency context. Settings have no dynamic-options query scope in v1.
 With `labels`, give fixed options the text users read and add `translations` for
 other languages; keep stored values stable and write labels in English in the
 manifest. Order fixed options so the recommended one comes first: a new required
-choice starts there.
+choice starts there. The editor shows an optional choice that has no value at
+its first option, and saves a value only when the user picks one. Make that
+first option what the plugin does when the value is absent.
 
 For an on/off source (muted, recording, visible), negotiate `visual_states`,
 declare the visual's two `states` (resting state second) with small, legible
